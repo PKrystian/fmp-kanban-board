@@ -1,5 +1,5 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Offcanvas } from 'bootstrap';
+import { Collapse, Offcanvas } from 'bootstrap';
 import $ from 'jquery';
 import Sortable from 'sortablejs';
 
@@ -13,6 +13,7 @@ $(function () {
 
     const $panel = $(panelElement);
     const panel = Offcanvas.getOrCreateInstance(panelElement);
+    const filtersActive = $board.attr('data-filters-active') === 'true';
     const cardSortables = [];
     let columnSortable = null;
     let panelUrl = null;
@@ -59,6 +60,53 @@ $(function () {
         cardSortables.forEach((sortable) => sortable.option('disabled', disabled));
         columnSortable?.option('disabled', disabled);
     };
+
+    const collapsedColumnsStorageKey = `fmp-kanban:board:${$board.attr('data-board-id')}:collapsed-columns`;
+    let collapsedColumnIds = new Set();
+
+    try {
+        const storedColumnIds = JSON.parse(localStorage.getItem(collapsedColumnsStorageKey) || '[]');
+        if (Array.isArray(storedColumnIds)) {
+            collapsedColumnIds = new Set(storedColumnIds.map(String));
+        }
+    } catch {
+        collapsedColumnIds = new Set();
+    }
+
+    const storeCollapsedColumns = () => {
+        try {
+            localStorage.setItem(collapsedColumnsStorageKey, JSON.stringify([...collapsedColumnIds]));
+        } catch {
+        }
+    };
+
+    $board.find('[data-column-collapse]').each(function () {
+        const columnId = $(this).closest('[data-board-column]').attr('data-column-id');
+        const $toggle = $board.find(`[data-column-collapse-toggle][aria-controls="${this.id}"]`).first();
+
+        if (collapsedColumnIds.has(columnId)) {
+            $(this).removeClass('show');
+            $toggle.addClass('collapsed').attr('aria-expanded', 'false').text('Expand');
+        }
+
+        Collapse.getOrCreateInstance(this, { toggle: false });
+
+        this.addEventListener('shown.bs.collapse', () => {
+            collapsedColumnIds.delete(columnId);
+            $toggle.removeClass('collapsed').attr('aria-expanded', 'true').text('Collapse');
+            storeCollapsedColumns();
+        });
+
+        this.addEventListener('hidden.bs.collapse', () => {
+            collapsedColumnIds.add(columnId);
+            $toggle.addClass('collapsed').attr('aria-expanded', 'false').text('Expand');
+            storeCollapsedColumns();
+        });
+    });
+
+    $board.on('change', '[data-filter-auto-submit]', function () {
+        this.form.requestSubmit();
+    });
 
     const restoreCard = (item, sourceList, oldIndex) => {
         item.remove();
@@ -154,6 +202,11 @@ $(function () {
             data: $form.serialize(),
         })
             .done((html) => {
+                if (filtersActive) {
+                    window.location.reload();
+                    return;
+                }
+
                 applyCardMutation(html);
                 panel.hide();
             })
@@ -185,6 +238,11 @@ $(function () {
             data: $form.serialize(),
         })
             .done((html) => {
+                if (filtersActive) {
+                    window.location.reload();
+                    return;
+                }
+
                 const $response = applyCardMutation(html);
                 const $replacement = $response.find('[data-quick-create-fragment]').children().first().detach();
                 $container.replaceWith($replacement);
@@ -208,6 +266,7 @@ $(function () {
 
     $board.find('[data-card-list]').each(function () {
         const sortable = Sortable.create(this, {
+            disabled: filtersActive,
             group: 'board-cards',
             draggable: '[data-card-entry]',
             filter: 'button, form, input, textarea, select, label',
@@ -247,7 +306,7 @@ $(function () {
                         showMoveError();
                     })
                     .always(() => {
-                        setSortingDisabled(false);
+                        setSortingDisabled(filtersActive);
                     });
             },
         });
@@ -258,6 +317,7 @@ $(function () {
     const columnList = $board.find('[data-column-list]').get(0);
     if (columnList) {
         columnSortable = Sortable.create(columnList, {
+            disabled: filtersActive,
             draggable: '[data-board-column]',
             filter: '[data-card-entry], a, button, form, input, textarea, select, label, .modal',
             preventOnFilter: false,
@@ -292,7 +352,7 @@ $(function () {
                         showColumnMoveError();
                     })
                     .always(() => {
-                        setSortingDisabled(false);
+                        setSortingDisabled(filtersActive);
                     });
             },
         });

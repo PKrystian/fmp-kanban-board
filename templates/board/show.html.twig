@@ -5,6 +5,8 @@
 {% block body %}
     <div
         data-kanban-board
+        data-board-id="{{ board.id }}"
+        data-filters-active="{{ filtersActive ? 'true' : 'false' }}"
         data-card-move-token="{{ csrf_token('move_cards_' ~ board.id) }}"
         data-column-reorder-url="{{ path('app_board_column_reorder', {boardId: board.id}) }}"
         data-column-reorder-token="{{ csrf_token('reorder_columns_' ~ board.id) }}"
@@ -22,7 +24,7 @@
         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
             <div>
                 <h1 id="board-heading" class="h2 mb-1">{{ board.name }}</h1>
-                <p class="text-body-secondary mb-0">Track work as it moves across the board.</p>
+                <p class="text-body-secondary mb-0">Track work as it moves across the board</p>
             </div>
             <div class="d-flex flex-wrap align-items-center gap-2 align-self-start align-self-md-center">
                 <span class="badge rounded-pill text-bg-light border">
@@ -34,43 +36,100 @@
             </div>
         </div>
 
+        <form class="card card-body border-0 shadow-sm mb-3" method="get" action="{{ path('app_board_show', {id: board.id}) }}" data-filter-form>
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-4">
+                    <label class="form-label" for="filter-search">Search</label>
+                    <input class="form-control" id="filter-search" name="q" type="search" value="{{ filters.q }}" placeholder="Title or description">
+                </div>
+                <div class="col-6 col-lg-2">
+                    <label class="form-label" for="filter-type">Type</label>
+                    <select class="form-select" id="filter-type" name="type" data-filter-auto-submit>
+                        <option value="">All types</option>
+                        {% for type in cardTypes %}
+                            <option value="{{ type.value }}"{{ filters.type == type.value ? ' selected' }}>{{ type.value|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <label class="form-label" for="filter-priority">Priority</label>
+                    <select class="form-select" id="filter-priority" name="priority" data-filter-auto-submit>
+                        <option value="">All priorities</option>
+                        {% for priority in cardPriorities %}
+                            <option value="{{ priority.value }}"{{ filters.priority == priority.value ? ' selected' }}>{{ priority.value|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-2">
+                    <label class="form-label" for="filter-due">Due date</label>
+                    <input class="form-control" id="filter-due" name="due" type="date" value="{{ filters.due }}" data-filter-auto-submit>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-2">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary flex-grow-1" type="submit">Apply</button>
+                        {% if filtersActive %}
+                            <a class="btn btn-outline-secondary" href="{{ path('app_board_show', {id: board.id}) }}">Clear</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        {% if filtersActive %}
+            <div class="alert alert-info py-2" role="status">
+                Filters are active. Clear them to change the card or column order.
+            </div>
+        {% endif %}
+
         <div class="row flex-nowrap overflow-x-auto g-3 pb-3" aria-label="Board columns" data-column-list>
             {% for column in board.columns %}
-                {% set card_count = column.cards|length %}
-                {% set wip_exceeded = column.wipLimit is not null and card_count > column.wipLimit %}
+                {% set visible_card_count = visibleCardCounts[column.id]|default(0) %}
+                {% set total_card_count = totalCardCounts[column.id]|default(0) %}
+                {% set wip_exceeded = column.wipLimit is not null and total_card_count > column.wipLimit %}
                 <article
                     class="col-10 col-sm-6 col-lg-3"
                     data-board-column
                     data-column-id="{{ column.id }}"
                     data-wip-limit="{{ column.wipLimit }}"
                 >
-                    <div class="card h-100 border-0 shadow-sm bg-body-secondary">
+                    <div class="card border-0 shadow-sm bg-body-secondary">
                         <div class="card-header bg-transparent border-0 pt-3">
                             <div class="d-flex align-items-start justify-content-between gap-2">
                                 <h2 class="h6 fw-semibold mb-0">{{ column.name }}</h2>
                                 <span
                                     class="badge rounded-pill {{ wip_exceeded ? 'text-bg-danger' : 'text-bg-light' }}"
                                     data-card-count-badge
-                                    aria-label="{{ card_count }} cards{{ column.wipLimit is not null ? ', WIP limit ' ~ column.wipLimit : ', no WIP limit' }}{{ wip_exceeded ? ', limit exceeded' }}"
+                                    aria-label="{{ filtersActive ? visible_card_count ~ ' cards shown, ' : '' }}{{ total_card_count }} cards{{ column.wipLimit is not null ? ', WIP limit ' ~ column.wipLimit : ', no WIP limit' }}{{ wip_exceeded ? ', limit exceeded' }}"
                                 >
-                                    <span data-card-count>{{ card_count }}</span> cards
-                                    &middot; WIP <span data-wip-limit>{{ column.wipLimit ?? 'No limit' }}</span>
+                                    {% if filtersActive %}{{ visible_card_count }} shown | {% endif %}<span data-card-count>{{ total_card_count }}</span> cards | WIP <span data-wip-limit>{{ column.wipLimit ?? 'No limit' }}</span>
                                 </span>
                             </div>
                             <div class="btn-group btn-group-sm mt-3" role="group" aria-label="Manage {{ column.name }} column">
+                                <button
+                                    class="btn btn-outline-secondary"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#column-content-{{ column.id }}"
+                                    data-column-collapse-toggle
+                                    aria-expanded="true"
+                                    aria-controls="column-content-{{ column.id }}"
+                                >Collapse</button>
                                 <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#edit-column-{{ column.id }}">Edit</button>
                                 <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#delete-column-{{ column.id }}">Delete</button>
                             </div>
                         </div>
+                        <div class="collapse show" id="column-content-{{ column.id }}" data-column-collapse>
                         <div class="card-body d-flex flex-column gap-3">
                             <div class="vstack gap-3" data-card-list>
-                                {% for card in column.cards %}
+                                {% for card in cardsByColumn[column.id] %}
                                     {% include 'card/_card.html.twig' with {
                                         card: card,
                                         deleteForm: cardDeleteForms[card.id]
                                     } only %}
                                 {% else %}
-                                    {% include 'card/_empty_column.html.twig' %}
+                                    {% include 'card/_empty_column.html.twig' with {
+                                        message: filtersActive ? 'No cards match the current filters' : 'No cards in this column'
+                                    } only %}
                                 {% endfor %}
                             </div>
 
@@ -92,6 +151,7 @@
                             </div>
                         </div>
                     </div>
+                </div>
                 </article>
             {% endfor %}
         </div>
@@ -148,7 +208,7 @@
                         <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-0">Only an empty column can be deleted, and every board must keep at least one column.</p>
+                        <p class="mb-0">Only an empty column can be deleted, and every board must keep at least one column</p>
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
@@ -184,7 +244,7 @@
         <div class="offcanvas-body">
             <div class="alert alert-danger" role="alert" data-card-panel-error>
                 <h3 class="alert-heading h6">Could not load the card</h3>
-                <p>Check your connection and try again, or reload the board.</p>
+                <p>Check your connection and try again, or reload the board</p>
                 <div class="d-flex flex-wrap gap-2">
                     <button class="btn btn-danger" type="button" data-card-panel-retry>Try again</button>
                     <a class="btn btn-outline-danger" href="{{ path('app_board_show', {id: board.id}) }}">Reload board</a>
@@ -195,7 +255,7 @@
 
     <template data-quick-create-error-template>
         <div class="alert alert-danger" role="alert" data-quick-create-error>
-            <p class="mb-2">Could not create the card. Check your connection and try again.</p>
+            <p class="mb-2">Could not create the card. Check your connection and try again</p>
             <div class="d-flex flex-wrap gap-2">
                 <button class="btn btn-sm btn-danger" type="button" data-quick-create-retry>Try again</button>
                 <a class="btn btn-sm btn-outline-danger" href="{{ path('app_board_show', {id: board.id}) }}">Reload board</a>
@@ -213,7 +273,7 @@
 
     <template data-column-move-error-template>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            Could not reorder the columns. The previous order has been restored.
+            Could not reorder the columns. The previous order has been restored
             <a class="alert-link" href="{{ path('app_board_show', {id: board.id}) }}">Reload the board</a>
             <button class="btn-close" type="button" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>

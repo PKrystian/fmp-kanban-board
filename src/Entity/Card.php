@@ -6,10 +6,11 @@ namespace App\Entity;
 
 use App\Enum\CardPriority;
 use App\Enum\CardType;
+use App\Repository\CardRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: CardRepository::class)]
 class Card
 {
     #[ORM\Id]
