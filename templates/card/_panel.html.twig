@@ -1,0 +1,22 @@
+<div class="offcanvas-header">
+    <div>
+        <p class="text-body-secondary small mb-1">{{ board.name }} / {{ column.name }}</p>
+        <h2 class="offcanvas-title h5" id="card-panel-title">{{ heading }}</h2>
+    </div>
+    <button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+</div>
+<div class="offcanvas-body">
+    {{ form_start(cardForm, {attr: {'data-card-panel-form': '', novalidate: 'novalidate'}}) }}
+        {{ form_errors(cardForm) }}
+        {{ form_row(cardForm.title) }}
+        {{ form_row(cardForm.description) }}
+        {% if cardForm.column is defined %}
+            {{ form_row(cardForm.column) }}
+        {% endif %}
+
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" type="submit">{{ submitLabel }}</button>
+            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="offcanvas">Cancel</button>
+        </div>
+    {{ form_end(cardForm) }}
+</div>

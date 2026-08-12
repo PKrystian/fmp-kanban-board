@@ -23,6 +23,7 @@ final class CardType extends AbstractType
     {
         $builder
             ->add('title', TextType::class, [
+                'empty_data' => '',
                 'attr' => [
                     'autocomplete' => 'off',
                     'maxlength' => 255,

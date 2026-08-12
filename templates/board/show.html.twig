@@ -3,6 +3,9 @@
 {% block title %}{{ board.name }} | FMP Kanban{% endblock %}
 
 {% block body %}
+    <div data-kanban-board>
+    <div data-board-feedback aria-live="polite"></div>
+
     <nav aria-label="Breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ path('app_board_index') }}">Boards</a></li>
@@ -23,31 +26,93 @@
 
         <div class="row flex-nowrap overflow-x-auto g-3 pb-3" aria-label="Board columns">
             {% for column in board.columns %}
-                <article class="col-10 col-sm-6 col-lg-3">
+                <article class="col-10 col-sm-6 col-lg-3" data-board-column data-column-id="{{ column.id }}">
                     <div class="card h-100 border-0 shadow-sm bg-body-secondary">
                         <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between gap-2 pt-3">
                             <h2 class="h6 fw-semibold mb-0">{{ column.name }}</h2>
-                            <span class="badge rounded-pill text-bg-light" aria-label="{{ column.cards|length }} cards">{{ column.cards|length }}</span>
+                            <span class="badge rounded-pill text-bg-light">
+                                <span data-card-count>{{ column.cards|length }}</span>
+                                <span class="visually-hidden">cards</span>
+                            </span>
                         </div>
                         <div class="card-body d-flex flex-column gap-3">
-                            {% for card in column.cards %}
-                                {% include 'card/_card.html.twig' with {
-                                    card: card,
-                                    deleteForm: cardDeleteForms[card.id]
-                                } only %}
-                            {% else %}
-                                <div class="card border-0">
-                                    <div class="card-body py-4 text-center">
-                                        <p class="small text-body-secondary mb-0">No cards in this column</p>
-                                    </div>
-                                </div>
-                            {% endfor %}
+                            <div class="vstack gap-3" data-card-list>
+                                {% for card in column.cards %}
+                                    {% include 'card/_card.html.twig' with {
+                                        card: card,
+                                        deleteForm: cardDeleteForms[card.id]
+                                    } only %}
+                                {% else %}
+                                    {% include 'card/_empty_column.html.twig' %}
+                                {% endfor %}
+                            </div>
 
-                            <a class="btn btn-sm btn-outline-primary mt-auto" href="{{ path('app_card_new', {boardId: board.id, columnId: column.id}) }}">Add card</a>
+                            <a
+                                class="btn btn-sm btn-outline-primary mt-auto"
+                                href="{{ path('app_card_new', {boardId: board.id, columnId: column.id}) }}"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#quick-create-{{ column.id }}"
+                                aria-expanded="false"
+                                aria-controls="quick-create-{{ column.id }}"
+                            >Add card</a>
+
+                            <div class="collapse" id="quick-create-{{ column.id }}" data-quick-create-container>
+                                {% include 'card/_quick_create_form.html.twig' with {
+                                    board: board,
+                                    column: column,
+                                    cardForm: quickCreateForms[column.id]
+                                } only %}
+                            </div>
                         </div>
                     </div>
                 </article>
             {% endfor %}
         </div>
     </section>
+
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="card-panel" aria-labelledby="card-panel-title" data-card-panel></div>
+
+    <template data-card-panel-loading-template>
+        <div class="offcanvas-header">
+            <h2 class="offcanvas-title h5" id="card-panel-title">Card details</h2>
+            <button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex align-items-center justify-content-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading card details</span>
+            </div>
+        </div>
+    </template>
+
+    <template data-card-panel-error-template>
+        <div class="offcanvas-header">
+            <h2 class="offcanvas-title h5" id="card-panel-title">Card details</h2>
+            <button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div class="alert alert-danger" role="alert" data-card-panel-error>
+                <h3 class="alert-heading h6">Could not load the card</h3>
+                <p>Check your connection and try again, or reload the board.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-danger" type="button" data-card-panel-retry>Try again</button>
+                    <a class="btn btn-outline-danger" href="{{ path('app_board_show', {id: board.id}) }}">Reload board</a>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template data-quick-create-error-template>
+        <div class="alert alert-danger" role="alert" data-quick-create-error>
+            <p class="mb-2">Could not create the card. Check your connection and try again.</p>
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-sm btn-danger" type="button" data-quick-create-retry>Try again</button>
+                <a class="btn btn-sm btn-outline-danger" href="{{ path('app_board_show', {id: board.id}) }}">Reload board</a>
+            </div>
+        </div>
+    </template>
+
+    <template data-empty-column-template>
+        {% include 'card/_empty_column.html.twig' %}
+    </template>
+    </div>
 {% endblock %}

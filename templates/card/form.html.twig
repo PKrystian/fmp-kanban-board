@@ -21,6 +21,7 @@
                     {% endif %}
 
                     {{ form_start(cardForm) }}
+                        {{ form_errors(cardForm) }}
                         {{ form_row(cardForm.title) }}
                         {{ form_row(cardForm.description) }}
                         {% if cardForm.column is defined %}

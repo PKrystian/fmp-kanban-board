@@ -1,0 +1,20 @@
+<div class="card card-body border-0 bg-body-tertiary" data-quick-create>
+    <h3 class="h6">Create a card in {{ column.name }}</h3>
+
+    {{ form_start(cardForm, {attr: {'data-quick-create-form': ''}}) }}
+        {{ form_errors(cardForm) }}
+        {{ form_row(cardForm.title) }}
+        {{ form_row(cardForm.description) }}
+
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-sm btn-primary" type="submit">Create card</button>
+            <button
+                class="btn btn-sm btn-outline-secondary"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#quick-create-{{ column.id }}"
+                aria-controls="quick-create-{{ column.id }}"
+            >Cancel</button>
+        </div>
+    {{ form_end(cardForm) }}
+</div>

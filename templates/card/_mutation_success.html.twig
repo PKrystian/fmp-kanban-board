@@ -1,0 +1,22 @@
+<div data-card-mutation-response>
+    <div data-card-fragment>
+        {% include 'card/_card.html.twig' with {card: card, deleteForm: deleteForm} only %}
+    </div>
+
+    {% if quickCreateForm is defined %}
+        <div data-quick-create-fragment>
+            {% include 'card/_quick_create_form.html.twig' with {
+                board: card.column.board,
+                column: column,
+                cardForm: quickCreateForm
+            } only %}
+        </div>
+    {% endif %}
+
+    <div data-feedback-fragment>
+        <div class="alert alert-success alert-dismissible fade show" role="status">
+            {{ message }}
+            <button class="btn-close" type="button" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+</div>

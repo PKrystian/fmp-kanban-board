@@ -1,12 +1,19 @@
-<div class="card border-0 shadow-sm">
+<div data-card-entry data-card-id="{{ card.id }}" data-card-column-id="{{ card.column.id }}">
+<div class="card border-0 shadow-sm position-relative">
     <div class="card-body">
-        <h3 class="h6 card-title mb-2">{{ card.title }}</h3>
+        <h3 class="h6 card-title mb-2">
+            <a
+                class="stretched-link link-body-emphasis text-decoration-none"
+                href="{{ path('app_card_edit', {boardId: card.column.board.id, cardId: card.id}) }}"
+                data-card-panel-url
+            >{{ card.title }}</a>
+        </h3>
         {% if card.description %}
             <p class="card-text small text-body-secondary">{{ card.description|nl2br }}</p>
         {% endif %}
 
-        <div class="d-flex gap-2">
-            <a class="btn btn-sm btn-outline-primary" href="{{ path('app_card_edit', {boardId: card.column.board.id, cardId: card.id}) }}">Edit</a>
+        <div class="d-flex gap-2 position-relative z-2">
+            <a class="btn btn-sm btn-outline-primary" href="{{ path('app_card_edit', {boardId: card.column.board.id, cardId: card.id}) }}" data-card-panel-url>Edit</a>
             <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#delete-card-{{ card.id }}">Delete</button>
         </div>
     </div>
@@ -30,4 +37,5 @@
             </div>
         </div>
     </div>
+</div>
 </div>
