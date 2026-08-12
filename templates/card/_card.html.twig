@@ -1,4 +1,9 @@
-<div data-card-entry data-card-id="{{ card.id }}" data-card-column-id="{{ card.column.id }}">
+<div
+    data-card-entry
+    data-card-id="{{ card.id }}"
+    data-card-column-id="{{ card.column.id }}"
+    data-card-move-url="{{ path('app_card_move', {boardId: card.column.board.id, cardId: card.id}) }}"
+>
 <div class="card border-0 shadow-sm position-relative">
     <div class="card-body">
         <h3 class="h6 card-title mb-2">

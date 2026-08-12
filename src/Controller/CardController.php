@@ -10,6 +10,7 @@ use App\Entity\Card;
 use App\Form\CardDeleteType;
 use App\Form\CardType;
 use App\Security\BoardVoter;
+use App\Service\CardMover;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -86,6 +87,7 @@ final class CardController extends AbstractController
         Request $request,
         EntityManagerInterface $entityManager,
         FormFactoryInterface $formFactory,
+        CardMover $cardMover,
     ): Response {
         $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
         $this->denyUnlessCardBelongsToBoard($card, $board);
@@ -108,10 +110,11 @@ final class CardController extends AbstractController
             }
 
             if ($selectedColumn !== $originalColumn) {
-                $card->setPosition($this->nextPosition($selectedColumn));
+                $card->setColumn($originalColumn);
+                $cardMover->move($card, $selectedColumn, $selectedColumn->getCards()->count() + 1);
+            } else {
+                $entityManager->flush();
             }
-
-            $entityManager->flush();
 
             if ($request->isXmlHttpRequest()) {
                 return $this->render('card/_mutation_success.html.twig', [
@@ -140,6 +143,36 @@ final class CardController extends AbstractController
         }
 
         return $response;
+    }
+
+    #[Route('/cards/{cardId}/move', name: 'app_card_move', requirements: ['cardId' => '\\d+'], methods: ['POST'])]
+    public function move(
+        #[MapEntity(id: 'boardId')] Board $board,
+        #[MapEntity(id: 'cardId')] Card $card,
+        Request $request,
+        EntityManagerInterface $entityManager,
+        CardMover $cardMover,
+    ): Response {
+        $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
+        $this->denyUnlessCardBelongsToBoard($card, $board);
+
+        if (!$this->isCsrfTokenValid('move_cards_'.$board->getId(), $request->headers->get('X-CSRF-Token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        $payload = $request->getPayload();
+        $targetColumn = $entityManager->find(BoardColumn::class, $payload->getInt('columnId'));
+        if (!$targetColumn instanceof BoardColumn || $targetColumn->getBoard()?->getId() !== $board->getId()) {
+            throw $this->createNotFoundException();
+        }
+
+        try {
+            $cardMover->move($card, $targetColumn, $payload->getInt('position'));
+        } catch (\InvalidArgumentException) {
+            return $this->json(['error' => 'Invalid card position.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return new Response(status: Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/cards/{cardId}/delete', name: 'app_card_delete', requirements: ['cardId' => '\\d+'], methods: ['POST'])]

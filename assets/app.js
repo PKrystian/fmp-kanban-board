@@ -1,6 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Offcanvas } from 'bootstrap';
 import $ from 'jquery';
+import Sortable from 'sortablejs';
 
 $(function () {
     const $board = $('[data-kanban-board]');
@@ -12,6 +13,7 @@ $(function () {
 
     const $panel = $(panelElement);
     const panel = Offcanvas.getOrCreateInstance(panelElement);
+    const sortables = [];
     let panelUrl = null;
 
     const templateContent = (selector) => {
@@ -39,6 +41,28 @@ $(function () {
         const $feedback = $response.find('[data-feedback-fragment]').children().first().detach();
 
         $board.find('[data-board-feedback]').first().empty().append($feedback);
+    };
+
+    const setSortingDisabled = (disabled) => {
+        sortables.forEach((sortable) => sortable.option('disabled', disabled));
+    };
+
+    const restoreCard = (item, sourceList, oldIndex) => {
+        item.remove();
+        sourceList.querySelector('[data-empty-column]')?.remove();
+
+        const cards = sourceList.querySelectorAll('[data-card-entry]');
+        if (oldIndex < cards.length) {
+            sourceList.insertBefore(item, cards[oldIndex]);
+        } else {
+            sourceList.append(item);
+        }
+    };
+
+    const showMoveError = () => {
+        $board.find('[data-board-feedback]').first()
+            .empty()
+            .append(templateContent('[data-card-move-error-template]'));
     };
 
     const applyCardMutation = (html) => {
@@ -161,5 +185,54 @@ $(function () {
 
     $board.on('click', '[data-quick-create-retry]', function () {
         $(this).closest('[data-quick-create]').find('[data-quick-create-form]').trigger('submit');
+    });
+
+    $board.find('[data-card-list]').each(function () {
+        const sortable = Sortable.create(this, {
+            group: 'board-cards',
+            draggable: '[data-card-entry]',
+            filter: 'button, form, input, textarea, select, label',
+            preventOnFilter: false,
+            onEnd: (event) => {
+                if (event.from === event.to && event.oldDraggableIndex === event.newDraggableIndex) {
+                    return;
+                }
+
+                const $card = $(event.item);
+                const $sourceColumn = $(event.from).closest('[data-board-column]');
+                const $targetColumn = $(event.to).closest('[data-board-column]');
+                const targetColumnId = $targetColumn.attr('data-column-id');
+
+                refreshColumn($sourceColumn);
+                refreshColumn($targetColumn);
+                setSortingDisabled(true);
+
+                $.ajax({
+                    url: $card.attr('data-card-move-url'),
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-Token': $board.attr('data-card-move-token'),
+                    },
+                    data: {
+                        columnId: targetColumnId,
+                        position: event.newDraggableIndex + 1,
+                    },
+                })
+                    .done(() => {
+                        $card.attr('data-card-column-id', targetColumnId);
+                    })
+                    .fail(() => {
+                        restoreCard(event.item, event.from, event.oldDraggableIndex);
+                        refreshColumn($sourceColumn);
+                        refreshColumn($targetColumn);
+                        showMoveError();
+                    })
+                    .always(() => {
+                        setSortingDisabled(false);
+                    });
+            },
+        });
+
+        sortables.push(sortable);
     });
 });

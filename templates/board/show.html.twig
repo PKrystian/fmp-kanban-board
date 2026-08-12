@@ -3,7 +3,7 @@
 {% block title %}{{ board.name }} | FMP Kanban{% endblock %}
 
 {% block body %}
-    <div data-kanban-board>
+    <div data-kanban-board data-card-move-token="{{ csrf_token('move_cards_' ~ board.id) }}">
     <div data-board-feedback aria-live="polite"></div>
 
     <nav aria-label="Breadcrumb">
@@ -108,6 +108,14 @@
                 <button class="btn btn-sm btn-danger" type="button" data-quick-create-retry>Try again</button>
                 <a class="btn btn-sm btn-outline-danger" href="{{ path('app_board_show', {id: board.id}) }}">Reload board</a>
             </div>
+        </div>
+    </template>
+
+    <template data-card-move-error-template>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            Could not move the card. The previous order has been restored.
+            <a class="alert-link" href="{{ path('app_board_show', {id: board.id}) }}">Reload the board</a>
+            <button class="btn-close" type="button" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     </template>
 

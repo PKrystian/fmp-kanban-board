@@ -29,4 +29,7 @@ return [
         'version' => '5.3.8',
         'type' => 'css',
     ],
+    'sortablejs' => [
+        'version' => '1.15.7',
+    ],
 ];
