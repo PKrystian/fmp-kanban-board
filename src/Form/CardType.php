@@ -7,9 +7,13 @@ namespace App\Form;
 use App\Entity\Board;
 use App\Entity\BoardColumn;
 use App\Entity\Card;
+use App\Enum\CardPriority;
+use App\Enum\CardType as CardTypeValue;
 use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -38,6 +42,20 @@ final class CardType extends AbstractType
                 'attr' => [
                     'rows' => 5,
                 ],
+            ])
+            ->add('type', EnumType::class, [
+                'class' => CardTypeValue::class,
+                'choice_label' => static fn (CardTypeValue $type): string => ucfirst($type->value),
+            ])
+            ->add('priority', EnumType::class, [
+                'class' => CardPriority::class,
+                'choice_label' => static fn (CardPriority $priority): string => ucfirst($priority->value),
+            ])
+            ->add('dueDate', DateType::class, [
+                'label' => 'Due date',
+                'required' => false,
+                'widget' => 'single_text',
+                'input' => 'datetime_immutable',
             ]);
 
         if ($options['include_column']) {

@@ -8,6 +8,8 @@ use App\Entity\Board;
 use App\Entity\BoardColumn;
 use App\Entity\Card;
 use App\Entity\User;
+use App\Enum\CardPriority;
+use App\Enum\CardType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -85,6 +87,9 @@ final class CardControllerTest extends WebTestCase
         $client->submit($crawler->selectButton('Save changes')->form([
             'card[title]' => 'Ready card',
             'card[description]' => 'Reviewed and ready.',
+            'card[type]' => 'bug',
+            'card[priority]' => 'critical',
+            'card[dueDate]' => '2026-08-20',
             'card[column]' => (string) $done->getId(),
         ]));
 
@@ -96,8 +101,18 @@ final class CardControllerTest extends WebTestCase
         self::assertResponseRedirects('/boards/'.$board->getId());
         self::assertSame('Ready card', $updatedCard->getTitle());
         self::assertSame('Reviewed and ready.', $updatedCard->getDescription());
+        self::assertSame(CardType::Bug, $updatedCard->getType());
+        self::assertSame(CardPriority::Critical, $updatedCard->getPriority());
+        self::assertSame('2026-08-20', $updatedCard->getDueDate()?->format('Y-m-d'));
         self::assertSame($done->getId(), $updatedCard->getColumn()?->getId());
         self::assertSame(2, $updatedCard->getPosition());
+
+        $crawler = $client->request('GET', '/boards/'.$board->getId().'/cards/'.$cardId.'/edit');
+        $reopenedForm = $crawler->selectButton('Save changes')->form();
+
+        self::assertSame('bug', $reopenedForm->get('card[type]')->getValue());
+        self::assertSame('critical', $reopenedForm->get('card[priority]')->getValue());
+        self::assertSame('2026-08-20', $reopenedForm->get('card[dueDate]')->getValue());
     }
 
     public function testLoggedInUserCanMoveCardAndBothColumnsKeepSequentialOrder(): void

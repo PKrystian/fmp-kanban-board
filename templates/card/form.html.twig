@@ -16,6 +16,9 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
                     <h1 class="h3 card-title">{{ heading }}</h1>
+                    {% if cardForm.vars.data.key %}
+                        <p class="text-body-secondary small mb-1">{{ cardForm.vars.data.key }}</p>
+                    {% endif %}
                     {% if column %}
                         <p class="text-body-secondary">Board: {{ board.name }} · Column: {{ column.name }}</p>
                     {% endif %}
@@ -24,6 +27,11 @@
                         {{ form_errors(cardForm) }}
                         {{ form_row(cardForm.title) }}
                         {{ form_row(cardForm.description) }}
+                        <div class="row">
+                            <div class="col-md-6">{{ form_row(cardForm.type) }}</div>
+                            <div class="col-md-6">{{ form_row(cardForm.priority) }}</div>
+                        </div>
+                        {{ form_row(cardForm.dueDate) }}
                         {% if cardForm.column is defined %}
                             {{ form_row(cardForm.column) }}
                         {% endif %}

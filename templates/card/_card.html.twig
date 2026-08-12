@@ -6,6 +6,19 @@
 >
 <div class="card border-0 shadow-sm position-relative">
     <div class="card-body">
+        {% set priority_class = {
+            low: 'text-bg-light border',
+            medium: 'text-bg-secondary',
+            high: 'text-bg-warning',
+            critical: 'text-bg-danger'
+        }[card.priority.value] %}
+        {% set overdue = card.dueDate and card.dueDate < date('today') %}
+
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <span class="small fw-semibold text-body-secondary">{{ card.key }}</span>
+            <span class="badge text-bg-light border">Type: {{ card.type.value|capitalize }}</span>
+            <span class="badge {{ priority_class }}">Priority: {{ card.priority.value|capitalize }}</span>
+        </div>
         <h3 class="h6 card-title mb-2">
             <a
                 class="stretched-link link-body-emphasis text-decoration-none"
@@ -13,8 +26,10 @@
                 data-card-panel-url
             >{{ card.title }}</a>
         </h3>
-        {% if card.description %}
-            <p class="card-text small text-body-secondary">{{ card.description|nl2br }}</p>
+        {% if card.dueDate %}
+            <p class="small mb-3 {{ overdue ? 'text-danger fw-semibold' : 'text-body-secondary' }}">
+                {{ overdue ? 'Overdue' : 'Due' }}: {{ card.dueDate|date('M j, Y') }}
+            </p>
         {% endif %}
 
         <div class="d-flex gap-2 position-relative z-2">
