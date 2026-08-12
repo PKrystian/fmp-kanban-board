@@ -32,13 +32,24 @@ final class BoardControllerTest extends WebTestCase
             'board[name]' => 'Product roadmap',
         ]));
 
-        $board = self::getContainer()->get(EntityManagerInterface::class)
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->clear();
+
+        $board = $entityManager
             ->getRepository(Board::class)
             ->findOneBy(['name' => 'Product roadmap']);
 
         self::assertInstanceOf(Board::class, $board);
         self::assertResponseRedirects('/boards/'.$board->getId());
         self::assertSame($user->getId(), $board->getOwner()?->getId());
+        self::assertSame(
+            ['Backlog', 'To do', 'In progress', 'Done'],
+            $board->getColumns()->map(static fn ($column): ?string => $column->getName())->toArray(),
+        );
+        self::assertSame(
+            [1, 2, 3, 4],
+            $board->getColumns()->map(static fn ($column): ?int => $column->getPosition())->toArray(),
+        );
 
         $client->followRedirect();
         self::assertResponseIsSuccessful();

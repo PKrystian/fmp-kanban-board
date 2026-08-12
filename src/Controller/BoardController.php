@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\Board;
+use App\Entity\BoardColumn;
 use App\Entity\User;
 use App\Form\BoardType;
 use App\Security\BoardVoter;
@@ -30,6 +31,14 @@ final class BoardController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            foreach (['Backlog', 'To do', 'In progress', 'Done'] as $position => $name) {
+                $board->addColumn(
+                    (new BoardColumn())
+                        ->setName($name)
+                        ->setPosition($position + 1),
+                );
+            }
+
             $entityManager->persist($board);
             $entityManager->flush();
 
