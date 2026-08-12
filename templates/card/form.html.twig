@@ -1,0 +1,39 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ heading }} | {{ board.name }} | FMP Kanban{% endblock %}
+
+{% block body %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('app_board_index') }}">Boards</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('app_board_show', {id: board.id}) }}">{{ board.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ heading }}</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-xl-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="h3 card-title">{{ heading }}</h1>
+                    {% if column %}
+                        <p class="text-body-secondary">Board: {{ board.name }} · Column: {{ column.name }}</p>
+                    {% endif %}
+
+                    {{ form_start(cardForm) }}
+                        {{ form_row(cardForm.title) }}
+                        {{ form_row(cardForm.description) }}
+                        {% if cardForm.column is defined %}
+                            {{ form_row(cardForm.column) }}
+                        {% endif %}
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" type="submit">{{ submitLabel }}</button>
+                            <a class="btn btn-outline-secondary" href="{{ path('app_board_show', {id: board.id}) }}">Cancel</a>
+                        </div>
+                    {{ form_end(cardForm) }}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

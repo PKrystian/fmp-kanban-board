@@ -1,0 +1,33 @@
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <h3 class="h6 card-title mb-2">{{ card.title }}</h3>
+        {% if card.description %}
+            <p class="card-text small text-body-secondary">{{ card.description|nl2br }}</p>
+        {% endif %}
+
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-primary" href="{{ path('app_card_edit', {boardId: card.column.board.id, cardId: card.id}) }}">Edit</a>
+            <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#delete-card-{{ card.id }}">Delete</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="delete-card-{{ card.id }}" tabindex="-1" aria-labelledby="delete-card-title-{{ card.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="delete-card-title-{{ card.id }}">Delete card?</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">This will permanently delete “{{ card.title }}”.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                {{ form_start(deleteForm) }}
+                    <button class="btn btn-danger" type="submit">Delete card</button>
+                {{ form_end(deleteForm) }}
+            </div>
+        </div>
+    </div>
+</div>

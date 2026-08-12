@@ -8,9 +8,11 @@ use App\Entity\Board;
 use App\Entity\BoardColumn;
 use App\Entity\User;
 use App\Form\BoardType;
+use App\Form\CardDeleteType;
 use App\Security\BoardVoter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -57,12 +59,31 @@ final class BoardController extends AbstractController
     }
 
     #[Route('/{id}', name: 'show', requirements: ['id' => '\\d+'], methods: ['GET'])]
-    public function show(Board $board): Response
+    public function show(Board $board, FormFactoryInterface $formFactory): Response
     {
         $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
 
+        $cardDeleteForms = [];
+        foreach ($board->getColumns() as $column) {
+            foreach ($column->getCards() as $card) {
+                $cardDeleteForms[$card->getId()] = $formFactory->createNamed(
+                    'delete_card_'.$card->getId(),
+                    CardDeleteType::class,
+                    null,
+                    [
+                        'action' => $this->generateUrl('app_card_delete', [
+                            'boardId' => $board->getId(),
+                            'cardId' => $card->getId(),
+                        ]),
+                        'csrf_token_id' => 'delete_card_'.$card->getId(),
+                    ],
+                )->createView();
+            }
+        }
+
         return $this->render('board/show.html.twig', [
             'board' => $board,
+            'cardDeleteForms' => $cardDeleteForms,
         ]);
     }
 }

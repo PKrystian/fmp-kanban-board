@@ -27,14 +27,23 @@
                     <div class="card h-100 border-0 shadow-sm bg-body-secondary">
                         <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between gap-2 pt-3">
                             <h2 class="h6 fw-semibold mb-0">{{ column.name }}</h2>
-                            <span class="badge rounded-pill text-bg-light" aria-label="0 items">0</span>
+                            <span class="badge rounded-pill text-bg-light" aria-label="{{ column.cards|length }} cards">{{ column.cards|length }}</span>
                         </div>
                         <div class="card-body d-flex flex-column gap-3">
-                            <div class="card border-0">
-                                <div class="card-body py-4 text-center">
-                                    <p class="small text-body-secondary mb-0">No items in this column</p>
+                            {% for card in column.cards %}
+                                {% include 'card/_card.html.twig' with {
+                                    card: card,
+                                    deleteForm: cardDeleteForms[card.id]
+                                } only %}
+                            {% else %}
+                                <div class="card border-0">
+                                    <div class="card-body py-4 text-center">
+                                        <p class="small text-body-secondary mb-0">No cards in this column</p>
+                                    </div>
                                 </div>
-                            </div>
+                            {% endfor %}
+
+                            <a class="btn btn-sm btn-outline-primary mt-auto" href="{{ path('app_card_new', {boardId: board.id, columnId: column.id}) }}">Add card</a>
                         </div>
                     </div>
                 </article>
