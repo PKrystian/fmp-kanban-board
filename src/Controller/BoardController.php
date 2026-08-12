@@ -1,0 +1,59 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controller;
+
+use App\Entity\Board;
+use App\Entity\User;
+use App\Form\BoardType;
+use App\Security\BoardVoter;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+
+#[Route('/boards', name: 'app_board_')]
+final class BoardController extends AbstractController
+{
+    #[Route('', name: 'index', methods: ['GET', 'POST'])]
+    public function index(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $board = (new Board())->setOwner($user);
+        $form = $this->createForm(BoardType::class, $board);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $entityManager->persist($board);
+            $entityManager->flush();
+
+            $this->addFlash('success', 'Board created.');
+
+            return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
+        }
+
+        return $this->render('board/index.html.twig', [
+            'boards' => $entityManager->getRepository(Board::class)->findBy(
+                ['owner' => $user],
+                ['id' => 'DESC'],
+            ),
+            'boardForm' => $form,
+        ]);
+    }
+
+    #[Route('/{id}', name: 'show', requirements: ['id' => '\\d+'], methods: ['GET'])]
+    public function show(Board $board): Response
+    {
+        $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
+
+        return $this->render('board/show.html.twig', [
+            'board' => $board,
+        ]);
+    }
+}

@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ board.name }} | FMP Kanban{% endblock %}
+
+{% block body %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('app_board_index') }}">Boards</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ board.name }}</li>
+        </ol>
+    </nav>
+
+    <section aria-labelledby="board-heading">
+        <h1 id="board-heading" class="h2 mb-4">{{ board.name }}</h1>
+        <div class="card border-0 shadow-sm">
+            <div class="card-body py-5 text-center">
+                <p class="text-body-secondary mb-0">This board is empty.</p>
+            </div>
+        </div>
+    </section>
+{% endblock %}

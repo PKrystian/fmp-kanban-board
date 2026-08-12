@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Boards | FMP Kanban{% endblock %}
+
+{% block body %}
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h1 class="h2 mb-0">Your boards</h1>
+            </div>
+
+            {% if boards %}
+                <div class="list-group shadow-sm">
+                    {% for board in boards %}
+                        <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3" href="{{ path('app_board_show', {id: board.id}) }}">
+                            <span class="fw-semibold">{{ board.name }}</span>
+                            <span aria-hidden="true">&rarr;</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body py-5 text-center">
+                        <h2 class="h5">No boards yet</h2>
+                        <p class="text-body-secondary mb-0">Create your first board using the form.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h2 class="h4 card-title">Create a board</h2>
+                    {{ form_start(boardForm) }}
+                        {{ form_row(boardForm.name) }}
+                        <button class="btn btn-primary" type="submit">Create board</button>
+                    {{ form_end(boardForm) }}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
