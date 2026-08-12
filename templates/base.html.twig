@@ -1,24 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{% block title %}FMP Kanban{% endblock %}</title>
         {% block stylesheets %}
         {% endblock %}
 
         {% block javascripts %}
             {% block importmap %}{{ importmap('app') }}{% endblock %}
         {% endblock %}
-
-        {% set frankenphp_hot_reload = app.request.server.get('FRANKENPHP_HOT_RELOAD') %}
-        {% if frankenphp_hot_reload %}
-        <meta name="frankenphp-hot-reload:url" content="{{ frankenphp_hot_reload }}">
-        <script src="https://cdn.jsdelivr.net/npm/idiomorph"></script>
-        <script src="https://cdn.jsdelivr.net/npm/frankenphp-hot-reload/+esm" type="module"></script>
-        {% endif %}
     </head>
-    <body>
-        {% block body %}{% endblock %}
+    <body class="d-flex flex-column min-vh-100 bg-body-tertiary">
+        <a class="visually-hidden-focusable position-absolute top-0 start-0 z-3 p-3 bg-dark text-white" href="#main-content">Skip to main content</a>
+
+        <header>
+            <nav class="navbar navbar-expand bg-body border-bottom" aria-label="Primary navigation">
+                <div class="container">
+                    <a class="navbar-brand" href="{{ path('app_home') }}">FMP Kanban</a>
+
+                    <ul class="navbar-nav flex-row">
+                        <li class="nav-item">
+                            <a class="nav-link{% if app.request.attributes.get('_route') == 'app_home' %} active{% endif %}" href="{{ path('app_home') }}"{% if app.request.attributes.get('_route') == 'app_home' %} aria-current="page"{% endif %}>Home</a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </header>
+
+        <main id="main-content" class="flex-grow-1 py-5" tabindex="-1">
+            <div class="container">
+                {% for label, messages in app.flashes %}
+                    {% set alert_variant = label in ['success', 'warning', 'info', 'danger'] ? label : (label == 'error' ? 'danger' : 'secondary') %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ alert_variant }}" role="{{ label in ['danger', 'error'] ? 'alert' : 'status' }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+
+                {% block body %}{% endblock %}
+            </div>
+        </main>
+
+        <footer class="border-top bg-body py-3">
+            <div class="container">
+                <p class="mb-0 text-body-secondary small">&copy; {{ 'now'|date('Y') }} FMP Kanban</p>
+            </div>
+        </footer>
     </body>
 </html>

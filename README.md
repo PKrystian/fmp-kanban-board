@@ -1,10 +1,13 @@
 # FMP
 
-FMP is a Kanban board application built with Symfony, MySQL, Docker, jQuery and SCSS.
+FMP is a Kanban board application built with Symfony, MySQL, Docker, Bootstrap 5 and jQuery.
 
-## Requirements
+## Stack
 
-- Docker
+- PHP 8.4.1+
+- Symfony 7.4
+- MySQL 8.4
+- Twig, AssetMapper, Bootstrap 5 and jQuery
 - Docker Compose
 
 ## Installation
@@ -33,18 +36,27 @@ The application is available at:
 http://localhost:8080
 ```
 
-## SCSS development
+## Frontend assets
 
-Run the SCSS watcher in a separate terminal:
+Bootstrap 5 and jQuery are managed by AssetMapper. Restore the browser packages after installing PHP dependencies:
 
 ```bash
-docker compose exec app php bin/console sass:build --watch
+docker compose exec app php bin/console importmap:install
 ```
 
-To compile SCSS once:
+## Quality checks
+
+Run the test suite:
 
 ```bash
-docker compose exec app php bin/console sass:build
+docker compose exec app php bin/phpunit
+```
+
+Validate templates and configuration:
+
+```bash
+docker compose exec app php bin/console lint:twig templates
+docker compose exec app php bin/console lint:yaml config compose.yaml compose.override.yaml
 ```
 
 ## Symfony console
