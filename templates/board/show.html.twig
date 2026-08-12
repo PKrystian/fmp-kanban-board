@@ -3,7 +3,12 @@
 {% block title %}{{ board.name }} | FMP Kanban{% endblock %}
 
 {% block body %}
-    <div data-kanban-board data-card-move-token="{{ csrf_token('move_cards_' ~ board.id) }}">
+    <div
+        data-kanban-board
+        data-card-move-token="{{ csrf_token('move_cards_' ~ board.id) }}"
+        data-column-reorder-url="{{ path('app_board_column_reorder', {boardId: board.id}) }}"
+        data-column-reorder-token="{{ csrf_token('reorder_columns_' ~ board.id) }}"
+    >
     <div data-board-feedback aria-live="polite"></div>
 
     <nav aria-label="Breadcrumb">
@@ -19,21 +24,43 @@
                 <h1 id="board-heading" class="h2 mb-1">{{ board.name }}</h1>
                 <p class="text-body-secondary mb-0">Track work as it moves across the board.</p>
             </div>
-            <span class="badge rounded-pill text-bg-light border align-self-start align-self-md-center">
-                {{ board.columns|length }} columns
-            </span>
+            <div class="d-flex flex-wrap align-items-center gap-2 align-self-start align-self-md-center">
+                <span class="badge rounded-pill text-bg-light border">
+                    {{ board.columns|length }} columns
+                </span>
+                <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#create-column">
+                    Add column
+                </button>
+            </div>
         </div>
 
-        <div class="row flex-nowrap overflow-x-auto g-3 pb-3" aria-label="Board columns">
+        <div class="row flex-nowrap overflow-x-auto g-3 pb-3" aria-label="Board columns" data-column-list>
             {% for column in board.columns %}
-                <article class="col-10 col-sm-6 col-lg-3" data-board-column data-column-id="{{ column.id }}">
+                {% set card_count = column.cards|length %}
+                {% set wip_exceeded = column.wipLimit is not null and card_count > column.wipLimit %}
+                <article
+                    class="col-10 col-sm-6 col-lg-3"
+                    data-board-column
+                    data-column-id="{{ column.id }}"
+                    data-wip-limit="{{ column.wipLimit }}"
+                >
                     <div class="card h-100 border-0 shadow-sm bg-body-secondary">
-                        <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between gap-2 pt-3">
-                            <h2 class="h6 fw-semibold mb-0">{{ column.name }}</h2>
-                            <span class="badge rounded-pill text-bg-light">
-                                <span data-card-count>{{ column.cards|length }}</span>
-                                <span class="visually-hidden">cards</span>
-                            </span>
+                        <div class="card-header bg-transparent border-0 pt-3">
+                            <div class="d-flex align-items-start justify-content-between gap-2">
+                                <h2 class="h6 fw-semibold mb-0">{{ column.name }}</h2>
+                                <span
+                                    class="badge rounded-pill {{ wip_exceeded ? 'text-bg-danger' : 'text-bg-light' }}"
+                                    data-card-count-badge
+                                    aria-label="{{ card_count }} cards{{ column.wipLimit is not null ? ', WIP limit ' ~ column.wipLimit : ', no WIP limit' }}{{ wip_exceeded ? ', limit exceeded' }}"
+                                >
+                                    <span data-card-count>{{ card_count }}</span> cards
+                                    &middot; WIP <span data-wip-limit>{{ column.wipLimit ?? 'No limit' }}</span>
+                                </span>
+                            </div>
+                            <div class="btn-group btn-group-sm mt-3" role="group" aria-label="Manage {{ column.name }} column">
+                                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#edit-column-{{ column.id }}">Edit</button>
+                                <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#delete-column-{{ column.id }}">Delete</button>
+                            </div>
                         </div>
                         <div class="card-body d-flex flex-column gap-3">
                             <div class="vstack gap-3" data-card-list>
@@ -69,6 +96,71 @@
             {% endfor %}
         </div>
     </section>
+
+    <div class="modal fade" id="create-column" tabindex="-1" aria-labelledby="create-column-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="create-column-title">Add column</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                {{ form_start(columnCreateForm) }}
+                    <div class="modal-body">
+                        {{ form_row(columnCreateForm.name) }}
+                        {{ form_row(columnCreateForm.wipLimit) }}
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-primary" type="submit">Add column</button>
+                    </div>
+                {{ form_end(columnCreateForm) }}
+            </div>
+        </div>
+    </div>
+
+    {% for column in board.columns %}
+        <div class="modal fade" id="edit-column-{{ column.id }}" tabindex="-1" aria-labelledby="edit-column-title-{{ column.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="edit-column-title-{{ column.id }}">Edit column</h2>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    {{ form_start(columnEditForms[column.id]) }}
+                        <div class="modal-body">
+                            {{ form_row(columnEditForms[column.id].name) }}
+                            {{ form_row(columnEditForms[column.id].wipLimit) }}
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                            <button class="btn btn-primary" type="submit">Save changes</button>
+                        </div>
+                    {{ form_end(columnEditForms[column.id]) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="delete-column-{{ column.id }}" tabindex="-1" aria-labelledby="delete-column-title-{{ column.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="delete-column-title-{{ column.id }}">Delete column?</h2>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0">Only an empty column can be deleted, and every board must keep at least one column.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <form method="post" action="{{ path('app_board_column_delete', {boardId: board.id, columnId: column.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete_column_' ~ column.id) }}">
+                            <button class="btn btn-danger" type="submit">Delete column</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
 
     <div class="offcanvas offcanvas-end" tabindex="-1" id="card-panel" aria-labelledby="card-panel-title" data-card-panel></div>
 
@@ -114,6 +206,14 @@
     <template data-card-move-error-template>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             Could not move the card. The previous order has been restored.
+            <a class="alert-link" href="{{ path('app_board_show', {id: board.id}) }}">Reload the board</a>
+            <button class="btn-close" type="button" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </template>
+
+    <template data-column-move-error-template>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            Could not reorder the columns. The previous order has been restored.
             <a class="alert-link" href="{{ path('app_board_show', {id: board.id}) }}">Reload the board</a>
             <button class="btn-close" type="button" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>

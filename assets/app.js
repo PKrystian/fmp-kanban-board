@@ -13,7 +13,8 @@ $(function () {
 
     const $panel = $(panelElement);
     const panel = Offcanvas.getOrCreateInstance(panelElement);
-    const sortables = [];
+    const cardSortables = [];
+    let columnSortable = null;
     let panelUrl = null;
 
     const templateContent = (selector) => {
@@ -27,6 +28,17 @@ $(function () {
         const count = $list.children('[data-card-entry]').length;
 
         $column.find('[data-card-count]').first().text(count);
+
+        const rawLimit = $column.attr('data-wip-limit');
+        const limit = rawLimit && /^\d+$/.test(rawLimit) ? Number(rawLimit) : null;
+        const isOverLimit = limit !== null && count > limit;
+        const $badge = $column.find('[data-card-count-badge]').first();
+        $badge.toggleClass('text-bg-danger', isOverLimit);
+        $badge.toggleClass('text-bg-light', !isOverLimit);
+        $badge.attr(
+            'aria-label',
+            `${count} cards, ${limit === null ? 'no WIP limit' : `WIP limit ${limit}${isOverLimit ? ', limit exceeded' : ''}`}`,
+        );
 
         if (count === 0 && !$list.children('[data-empty-column]').length) {
             $list.append(templateContent('[data-empty-column-template]'));
@@ -44,7 +56,8 @@ $(function () {
     };
 
     const setSortingDisabled = (disabled) => {
-        sortables.forEach((sortable) => sortable.option('disabled', disabled));
+        cardSortables.forEach((sortable) => sortable.option('disabled', disabled));
+        columnSortable?.option('disabled', disabled);
     };
 
     const restoreCard = (item, sourceList, oldIndex) => {
@@ -63,6 +76,12 @@ $(function () {
         $board.find('[data-board-feedback]').first()
             .empty()
             .append(templateContent('[data-card-move-error-template]'));
+    };
+
+    const showColumnMoveError = () => {
+        $board.find('[data-board-feedback]').first()
+            .empty()
+            .append(templateContent('[data-column-move-error-template]'));
     };
 
     const applyCardMutation = (html) => {
@@ -233,6 +252,49 @@ $(function () {
             },
         });
 
-        sortables.push(sortable);
+        cardSortables.push(sortable);
     });
+
+    const columnList = $board.find('[data-column-list]').get(0);
+    if (columnList) {
+        columnSortable = Sortable.create(columnList, {
+            draggable: '[data-board-column]',
+            filter: '[data-card-entry], a, button, form, input, textarea, select, label, .modal',
+            preventOnFilter: false,
+            onEnd: (event) => {
+                if (event.oldDraggableIndex === event.newDraggableIndex) {
+                    return;
+                }
+
+                const columnIds = $(columnList)
+                    .children('[data-board-column]')
+                    .map((index, column) => $(column).attr('data-column-id'))
+                    .get();
+
+                setSortingDisabled(true);
+
+                $.ajax({
+                    url: $board.attr('data-column-reorder-url'),
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-Token': $board.attr('data-column-reorder-token'),
+                    },
+                    data: { columnIds },
+                })
+                    .fail(() => {
+                        event.item.remove();
+                        const columns = columnList.querySelectorAll('[data-board-column]');
+                        if (event.oldDraggableIndex < columns.length) {
+                            columnList.insertBefore(event.item, columns[event.oldDraggableIndex]);
+                        } else {
+                            columnList.append(event.item);
+                        }
+                        showColumnMoveError();
+                    })
+                    .always(() => {
+                        setSortingDisabled(false);
+                    });
+            },
+        });
+    }
 });

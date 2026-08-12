@@ -9,6 +9,7 @@ use App\Entity\BoardColumn;
 use App\Entity\Card;
 use App\Entity\User;
 use App\Form\BoardType;
+use App\Form\BoardColumnType;
 use App\Form\CardDeleteType;
 use App\Form\CardType;
 use App\Security\BoardVoter;
@@ -66,8 +67,22 @@ final class BoardController extends AbstractController
         $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
 
         $cardDeleteForms = [];
+        $columnEditForms = [];
         $quickCreateForms = [];
         foreach ($board->getColumns() as $column) {
+            $columnEditForms[$column->getId()] = $formFactory->createNamed(
+                'edit_column_'.$column->getId(),
+                BoardColumnType::class,
+                $column,
+                [
+                    'action' => $this->generateUrl('app_board_column_edit', [
+                        'boardId' => $board->getId(),
+                        'columnId' => $column->getId(),
+                    ]),
+                    'method' => 'POST',
+                ],
+            )->createView();
+
             $quickCreateForms[$column->getId()] = $formFactory->createNamed(
                 'new_card_'.$column->getId(),
                 CardType::class,
@@ -101,6 +116,16 @@ final class BoardController extends AbstractController
         return $this->render('board/show.html.twig', [
             'board' => $board,
             'cardDeleteForms' => $cardDeleteForms,
+            'columnCreateForm' => $formFactory->createNamed(
+                'new_column',
+                BoardColumnType::class,
+                new BoardColumn(),
+                [
+                    'action' => $this->generateUrl('app_board_column_new', ['boardId' => $board->getId()]),
+                    'method' => 'POST',
+                ],
+            )->createView(),
+            'columnEditForms' => $columnEditForms,
             'quickCreateForms' => $quickCreateForms,
         ]);
     }

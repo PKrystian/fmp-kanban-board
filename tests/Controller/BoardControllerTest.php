@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Board;
+use App\Entity\BoardColumn;
+use App\Entity\Card;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -72,6 +74,47 @@ final class BoardControllerTest extends WebTestCase
         $client->request('GET', '/boards/'.$board->getId());
 
         self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+    }
+
+    public function testNonEmptyColumnCannotBeDeleted(): void
+    {
+        $client = self::createClient();
+        $user = $this->createUser('owner@example.com');
+        $backlog = (new BoardColumn())
+            ->setName('Backlog')
+            ->setPosition(1);
+        $board = (new Board())
+            ->setName('Product roadmap')
+            ->setOwner($user)
+            ->addColumn($backlog)
+            ->addColumn(
+                (new BoardColumn())
+                    ->setName('Done')
+                    ->setPosition(2),
+            );
+        $card = (new Card())
+            ->setTitle('Keep this card')
+            ->setPosition(1)
+            ->setColumn($backlog);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist($board);
+        $entityManager->persist($card);
+        $entityManager->flush();
+        $columnId = $backlog->getId();
+        $client->loginUser($user);
+
+        $crawler = $client->request('GET', '/boards/'.$board->getId());
+        $deleteForm = $crawler
+            ->filter('#delete-column-'.$columnId)
+            ->selectButton('Delete column')
+            ->form();
+        $client->submit($deleteForm);
+        $client->followRedirect();
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('.alert-warning', 'cannot be deleted because it contains cards');
+        $entityManager->clear();
+        self::assertInstanceOf(BoardColumn::class, $entityManager->find(BoardColumn::class, $columnId));
     }
 
     private function createUser(string $email): User

@@ -22,6 +22,9 @@ class BoardColumn
     #[ORM\Column]
     private ?int $position = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $wipLimit = null;
+
     #[ORM\ManyToOne(inversedBy: 'columns')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Board $board = null;
@@ -63,6 +66,18 @@ class BoardColumn
     public function setPosition(int $position): static
     {
         $this->position = $position;
+
+        return $this;
+    }
+
+    public function getWipLimit(): ?int
+    {
+        return $this->wipLimit;
+    }
+
+    public function setWipLimit(?int $wipLimit): static
+    {
+        $this->wipLimit = $wipLimit;
 
         return $this;
     }
