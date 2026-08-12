@@ -1,0 +1,46 @@
+services:
+  app:
+    build:
+      context: .
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: "mysql://fmp:fmp@database:3306/fmp?serverVersion=8.4.0&charset=utf8mb4"
+    volumes:
+      - ./:/var/www/html
+      - app_var:/var/www/html/var
+    depends_on:
+      database:
+        condition: service_healthy
+
+  web:
+    image: nginx:1.28-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+
+  database:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: fmp
+      MYSQL_USER: fmp
+      MYSQL_PASSWORD: fmp
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - database_data:/var/lib/mysql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  app_var:
+  database_data:
