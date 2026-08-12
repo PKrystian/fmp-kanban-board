@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Register{% endblock %}
+
+{% block body %}
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4 p-md-5">
+                    <h1 class="h3 mb-4">Create an account</h1>
+
+                    {{ form_start(registrationForm) }}
+                    {{ form_errors(registrationForm) }}
+                    {{ form_row(registrationForm.displayName) }}
+                    {{ form_row(registrationForm.email) }}
+                    {{ form_row(registrationForm.plainPassword) }}
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Register</button>
+                    </div>
+                    {{ form_end(registrationForm) }}
+
+                    <p class="text-body-secondary mt-4 mb-0">
+                        Already have an account? <a href="{{ path('app_login') }}">Log in</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
