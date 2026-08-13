@@ -101,13 +101,21 @@ $(function () {
 
         Collapse.getOrCreateInstance(this, { toggle: false });
 
-        this.addEventListener('shown.bs.collapse', () => {
+        this.addEventListener('shown.bs.collapse', (event) => {
+            if (event.target !== this) {
+                return;
+            }
+
             collapsedColumnIds.delete(columnId);
             $toggle.removeClass('collapsed').attr('aria-expanded', 'true').text('Collapse');
             storeCollapsedColumns();
         });
 
-        this.addEventListener('hidden.bs.collapse', () => {
+        this.addEventListener('hidden.bs.collapse', (event) => {
+            if (event.target !== this) {
+                return;
+            }
+
             collapsedColumnIds.add(columnId);
             $toggle.addClass('collapsed').attr('aria-expanded', 'false').text('Expand');
             storeCollapsedColumns();
@@ -142,7 +150,25 @@ $(function () {
             .append(templateContent('[data-column-move-error-template]'));
     };
 
-    const applyCardMutation = (html) => {
+    const isCardMutationResponse = (html, requiresQuickCreate = false) => {
+        const $response = $(html);
+
+        if (!$response.find('[data-card-fragment] > [data-card-entry]').length) {
+            return false;
+        }
+
+        if (!$response.find('[data-feedback-fragment]').length) {
+            return false;
+        }
+
+        return !requiresQuickCreate || $response.find('[data-quick-create-fragment] > *').length > 0;
+    };
+
+    const applyCardMutation = (html, requiresQuickCreate = false) => {
+        if (!isCardMutationResponse(html, requiresQuickCreate)) {
+            return null;
+        }
+
         const $response = $(html);
         const $entry = $response.find('[data-card-fragment] > [data-card-entry]').first().detach();
         const cardId = $entry.attr('data-card-id');
@@ -150,6 +176,10 @@ $(function () {
         const $existing = $board.find(`[data-card-entry][data-card-id="${cardId}"]`).first();
         const $sourceColumn = $existing.closest('[data-board-column]');
         const $targetColumn = $board.find(`[data-board-column][data-column-id="${columnId}"]`).first();
+
+        if (!cardId || !columnId || !$targetColumn.length) {
+            return null;
+        }
 
         if ($existing.length) {
             if ($sourceColumn.is($targetColumn)) {
@@ -187,6 +217,11 @@ $(function () {
 
         $.ajax({ url, method: 'GET' })
             .done((html) => {
+                if (!$(html).find('[data-card-panel-form]').length) {
+                    $panel.empty().append(templateContent('[data-card-panel-error-template]'));
+                    return;
+                }
+
                 $panel.html(html);
             })
             .fail(() => {
@@ -220,12 +255,17 @@ $(function () {
             data: $form.serialize(),
         })
             .done((html) => {
+                const $response = applyCardMutation(html);
+                if (!$response) {
+                    $panel.empty().append(templateContent('[data-card-panel-error-template]'));
+                    return;
+                }
+
                 if (filtersActive) {
                     window.location.reload();
                     return;
                 }
 
-                applyCardMutation(html);
                 panel.hide();
             })
             .fail((request) => {
@@ -256,13 +296,23 @@ $(function () {
             data: $form.serialize(),
         })
             .done((html) => {
+                const $response = applyCardMutation(html, true);
+                if (!$response) {
+                    $container.prepend(templateContent('[data-quick-create-error-template]'));
+                    return;
+                }
+
                 if (filtersActive) {
                     window.location.reload();
                     return;
                 }
 
-                const $response = applyCardMutation(html);
                 const $replacement = $response.find('[data-quick-create-fragment]').children().first().detach();
+                if (!$replacement.length) {
+                    $container.prepend(templateContent('[data-quick-create-error-template]'));
+                    return;
+                }
+
                 $container.replaceWith($replacement);
             })
             .fail((request) => {

@@ -16,7 +16,7 @@ Open <http://localhost:8080>. Stop the environment with `docker compose down`.
 
 ## Demo accounts
 
-The seed command creates two accounts and replaces only their documented demo boards. Other boards are left unchanged, so the command can be run again safely.
+The seed command creates the demo accounts and boards only when the accounts do not exist yet. Existing accounts and their boards are left unchanged. The command is disabled in the production environment.
 
 | Name | Email | Password | Example boards |
 | --- | --- | --- | --- |
@@ -25,7 +25,7 @@ The seed command creates two accounts and replaces only their documented demo bo
 
 To inspect or edit a Kanban board, open <http://localhost:8080/login>, sign in with either account, select **Boards** in the navigation and open one of the example boards. Cards can be opened by selecting their title or the **Edit** button.
 
-Recreate the demo data at any time with:
+Create any missing demo data with:
 
 ```bash
 docker compose exec app php bin/console app:seed-demo-data

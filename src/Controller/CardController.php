@@ -12,6 +12,7 @@ use App\Form\CardType;
 use App\Security\BoardVoter;
 use App\Service\CardArchiver;
 use App\Service\CardMover;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -44,10 +45,27 @@ final class CardController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $card->setPosition($this->nextPosition($column));
+            $columnId = $column->getId();
+            if (null === $columnId) {
+                throw $this->createNotFoundException();
+            }
 
-            $entityManager->persist($card);
-            $entityManager->flush();
+            $entityManager->wrapInTransaction(function () use ($card, $columnId, $entityManager): void {
+                $lockedColumn = $entityManager->find(
+                    BoardColumn::class,
+                    $columnId,
+                    LockMode::PESSIMISTIC_WRITE,
+                );
+                if (!$lockedColumn instanceof BoardColumn) {
+                    throw $this->createNotFoundException();
+                }
+
+                $card
+                    ->setColumn($lockedColumn)
+                    ->setPosition($this->nextPosition($lockedColumn, $entityManager));
+                $entityManager->persist($card);
+                $entityManager->flush();
+            });
 
             if ($request->isXmlHttpRequest()) {
                 return $this->render('card/_mutation_success.html.twig', [
@@ -113,7 +131,7 @@ final class CardController extends AbstractController
 
             if ($selectedColumn !== $originalColumn) {
                 $card->setColumn($originalColumn);
-                $cardMover->move($card, $selectedColumn, $this->activeCardCount($selectedColumn) + 1);
+                $cardMover->moveToEnd($card, $selectedColumn);
             } else {
                 $entityManager->flush();
             }
@@ -280,24 +298,18 @@ final class CardController extends AbstractController
         }
     }
 
-    private function nextPosition(BoardColumn $column): int
+    private function nextPosition(BoardColumn $column, EntityManagerInterface $entityManager): int
     {
-        $lastPosition = 0;
-        foreach ($column->getCards() as $card) {
-            if (!$card->isArchived() && null !== $card->getPosition()) {
-                $lastPosition = max($lastPosition, $card->getPosition());
-            }
-        }
+        $lastPosition = $entityManager->createQueryBuilder()
+            ->select('COALESCE(MAX(card.position), 0)')
+            ->from(Card::class, 'card')
+            ->andWhere('card.column = :column')
+            ->andWhere('card.archivedAt IS NULL')
+            ->setParameter('column', $column)
+            ->getQuery()
+            ->getSingleScalarResult();
 
-        return $lastPosition + 1;
-    }
-
-    private function activeCardCount(BoardColumn $column): int
-    {
-        return count(array_filter(
-            $column->getCards()->toArray(),
-            static fn (Card $card): bool => !$card->isArchived(),
-        ));
+        return (int) $lastPosition + 1;
     }
 
     private function createQuickCreateForm(

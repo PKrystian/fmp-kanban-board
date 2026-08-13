@@ -25,6 +25,19 @@ final class CardControllerTest extends WebTestCase
         self::ensureKernelShutdown();
     }
 
+    public function testUnauthenticatedAjaxRequestReturnsUnauthorizedResponse(): void
+    {
+        $client = self::createClient();
+        $client->request(
+            'GET',
+            '/boards/1/cards/1/edit',
+            server: ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'],
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+        self::assertStringContainsString('Authentication required', (string) $client->getResponse()->getContent());
+    }
+
     public function testLoggedInUserCanCreateCardAtEndOfColumn(): void
     {
         $client = self::createClient();

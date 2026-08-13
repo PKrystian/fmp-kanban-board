@@ -17,6 +17,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 #[AsCommand(
@@ -31,6 +32,7 @@ final class SeedDemoDataCommand extends Command
         private readonly EntityManagerInterface $entityManager,
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly UserRepository $userRepository,
+        private readonly KernelInterface $kernel,
     ) {
         parent::__construct();
     }
@@ -39,21 +41,26 @@ final class SeedDemoDataCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
+        if ('prod' === $this->kernel->getEnvironment()) {
+            $io->error('Demo data cannot be seeded in the prod environment');
+
+            return Command::FAILURE;
+        }
+
         foreach ($this->accounts() as $account) {
-            $user = $this->userRepository->findOneBy(['email' => $account['email']]) ?? new User();
+            $user = $this->userRepository->findOneBy(['email' => $account['email']]);
+            if ($user instanceof User) {
+                $io->note(sprintf('Skipping existing account %s', $account['email']));
+
+                continue;
+            }
+
+            $user = new User();
             $user
                 ->setDisplayName($account['name'])
                 ->setEmail($account['email']);
             $user->setPassword($this->passwordHasher->hashPassword($user, self::DEMO_PASSWORD));
             $this->entityManager->persist($user);
-            $this->entityManager->flush();
-
-            $demoBoardNames = array_column($account['boards'], 'name');
-            foreach ($this->entityManager->getRepository(Board::class)->findBy(['owner' => $user]) as $board) {
-                if (in_array($board->getName(), $demoBoardNames, true)) {
-                    $this->entityManager->remove($board);
-                }
-            }
             $this->entityManager->flush();
 
             foreach ($account['boards'] as $boardData) {
@@ -62,7 +69,7 @@ final class SeedDemoDataCommand extends Command
             $this->entityManager->flush();
         }
 
-        $io->success('Demo data is ready. Existing demo boards were replaced; other boards were left unchanged.');
+        $io->success('Demo data is ready. Existing accounts were left unchanged');
         $io->table(
             ['Name', 'Email', 'Password'],
             array_map(
@@ -152,19 +159,19 @@ final class SeedDemoDataCommand extends Command
                     [
                         'name' => 'Remont mieszkania',
                         'cards' => [
-                            ['column' => 'Backlog', 'title' => 'Wybrać lampy do salonu', 'description' => 'Porównać trzy modele i sprawdzić barwę światła.', 'type' => CardType::Task, 'priority' => CardPriority::Low],
-                            ['column' => 'To do', 'title' => 'Zamówić farbę', 'description' => 'Kupić 20 litrów zmywalnej farby w kolorze złamanej bieli.', 'type' => CardType::Task, 'priority' => CardPriority::High, 'dueInDays' => 3],
-                            ['column' => 'In progress', 'title' => 'Przygotować ściany', 'description' => 'Uzupełnić ubytki, wyszlifować powierzchnię i zabezpieczyć podłogę.', 'type' => CardType::Story, 'priority' => CardPriority::Medium, 'dueInDays' => 5],
-                            ['column' => 'Done', 'title' => 'Ustalić budżet remontu', 'description' => 'Budżet obejmuje materiały, robociznę oraz 10% rezerwy.', 'type' => CardType::Task, 'priority' => CardPriority::Medium],
+                            ['column' => 'Backlog', 'title' => 'Wybrać lampy do salonu', 'description' => 'Porównać trzy modele i sprawdzić barwę światła', 'type' => CardType::Task, 'priority' => CardPriority::Low],
+                            ['column' => 'To do', 'title' => 'Zamówić farbę', 'description' => 'Kupić 20 litrów zmywalnej farby w kolorze złamanej bieli', 'type' => CardType::Task, 'priority' => CardPriority::High, 'dueInDays' => 3],
+                            ['column' => 'In progress', 'title' => 'Przygotować ściany', 'description' => 'Uzupełnić ubytki, wyszlifować powierzchnię i zabezpieczyć podłogę', 'type' => CardType::Story, 'priority' => CardPriority::Medium, 'dueInDays' => 5],
+                            ['column' => 'Done', 'title' => 'Ustalić budżet remontu', 'description' => 'Budżet obejmuje materiały, robociznę oraz 10% rezerwy', 'type' => CardType::Task, 'priority' => CardPriority::Medium],
                         ],
                     ],
                     [
                         'name' => 'Plan nauki Symfony',
                         'cards' => [
-                            ['column' => 'Backlog', 'title' => 'Poznać Messenger', 'description' => 'Przejść dokumentację transportów i obsługi nieudanych wiadomości.', 'type' => CardType::Story, 'priority' => CardPriority::Low],
-                            ['column' => 'To do', 'title' => 'Powtórzyć Doctrine ORM', 'description' => 'Przećwiczyć relacje, migracje oraz analizę zapytań w profilerze.', 'type' => CardType::Task, 'priority' => CardPriority::High, 'dueInDays' => 7],
-                            ['column' => 'In progress', 'title' => 'Zbudować formularz', 'description' => 'Dodać walidację i obsłużyć czytelne komunikaty błędów.', 'type' => CardType::Task, 'priority' => CardPriority::Medium],
-                            ['column' => 'Done', 'title' => 'Skonfigurować środowisko', 'description' => 'Docker Compose uruchamia PHP, Nginx i MySQL.', 'type' => CardType::Task, 'priority' => CardPriority::Medium],
+                            ['column' => 'Backlog', 'title' => 'Poznać Messenger', 'description' => 'Przejść dokumentację transportów i obsługi nieudanych wiadomości', 'type' => CardType::Story, 'priority' => CardPriority::Low],
+                            ['column' => 'To do', 'title' => 'Powtórzyć Doctrine ORM', 'description' => 'Przećwiczyć relacje, migracje oraz analizę zapytań w profilerze', 'type' => CardType::Task, 'priority' => CardPriority::High, 'dueInDays' => 7],
+                            ['column' => 'In progress', 'title' => 'Zbudować formularz', 'description' => 'Dodać walidację i obsłużyć czytelne komunikaty błędów', 'type' => CardType::Task, 'priority' => CardPriority::Medium],
+                            ['column' => 'Done', 'title' => 'Skonfigurować środowisko', 'description' => 'Docker Compose uruchamia PHP, Nginx i MySQL', 'type' => CardType::Task, 'priority' => CardPriority::Medium],
                         ],
                     ],
                 ],
@@ -176,19 +183,19 @@ final class SeedDemoDataCommand extends Command
                     [
                         'name' => 'Organizacja konferencji',
                         'cards' => [
-                            ['column' => 'Backlog', 'title' => 'Przygotować ankietę', 'description' => 'Zebrać opinie uczestników o prelekcjach i organizacji wydarzenia.', 'type' => CardType::Story, 'priority' => CardPriority::Low],
-                            ['column' => 'To do', 'title' => 'Potwierdzić catering', 'description' => 'Uzgodnić menu, alergeny oraz godzinę dostawy.', 'type' => CardType::Task, 'priority' => CardPriority::Critical, 'dueInDays' => 2],
-                            ['column' => 'In progress', 'title' => 'Ułożyć agendę', 'description' => 'Rozmieścić wystąpienia, przerwy i sesję pytań w salach.', 'type' => CardType::Task, 'priority' => CardPriority::High, 'dueInDays' => 4],
-                            ['column' => 'Done', 'title' => 'Zarezerwować salę', 'description' => 'Sala główna i dwie sale warsztatowe są potwierdzone.', 'type' => CardType::Task, 'priority' => CardPriority::High],
+                            ['column' => 'Backlog', 'title' => 'Przygotować ankietę', 'description' => 'Zebrać opinie uczestników o prelekcjach i organizacji wydarzenia', 'type' => CardType::Story, 'priority' => CardPriority::Low],
+                            ['column' => 'To do', 'title' => 'Potwierdzić catering', 'description' => 'Uzgodnić menu, alergeny oraz godzinę dostawy', 'type' => CardType::Task, 'priority' => CardPriority::Critical, 'dueInDays' => 2],
+                            ['column' => 'In progress', 'title' => 'Ułożyć agendę', 'description' => 'Rozmieścić wystąpienia, przerwy i sesję pytań w salach', 'type' => CardType::Task, 'priority' => CardPriority::High, 'dueInDays' => 4],
+                            ['column' => 'Done', 'title' => 'Zarezerwować salę', 'description' => 'Sala główna i dwie sale warsztatowe są potwierdzone', 'type' => CardType::Task, 'priority' => CardPriority::High],
                         ],
                     ],
                     [
                         'name' => 'Wydanie aplikacji mobilnej',
                         'cards' => [
-                            ['column' => 'Backlog', 'title' => 'Dodać tryb offline', 'description' => 'Opisać zachowanie aplikacji bez połączenia z siecią.', 'type' => CardType::Story, 'priority' => CardPriority::Medium],
-                            ['column' => 'To do', 'title' => 'Naprawić ekran logowania', 'description' => 'Komunikat błędu zasłania przycisk na małych ekranach.', 'type' => CardType::Bug, 'priority' => CardPriority::Critical, 'dueInDays' => 1],
-                            ['column' => 'In progress', 'title' => 'Przygotować opis sklepu', 'description' => 'Napisać krótki opis funkcji i listę zmian w nowej wersji.', 'type' => CardType::Task, 'priority' => CardPriority::Medium, 'dueInDays' => 6],
-                            ['column' => 'Done', 'title' => 'Zatwierdzić ikonę aplikacji', 'description' => 'Finalna ikona została sprawdzona na jasnym i ciemnym tle.', 'type' => CardType::Task, 'priority' => CardPriority::Low],
+                            ['column' => 'Backlog', 'title' => 'Dodać tryb offline', 'description' => 'Opisać zachowanie aplikacji bez połączenia z siecią', 'type' => CardType::Story, 'priority' => CardPriority::Medium],
+                            ['column' => 'To do', 'title' => 'Naprawić ekran logowania', 'description' => 'Komunikat błędu zasłania przycisk na małych ekranach', 'type' => CardType::Bug, 'priority' => CardPriority::Critical, 'dueInDays' => 1],
+                            ['column' => 'In progress', 'title' => 'Przygotować opis sklepu', 'description' => 'Napisać krótki opis funkcji i listę zmian w nowej wersji', 'type' => CardType::Task, 'priority' => CardPriority::Medium, 'dueInDays' => 6],
+                            ['column' => 'Done', 'title' => 'Zatwierdzić ikonę aplikacji', 'description' => 'Finalna ikona została sprawdzona na jasnym i ciemnym tle', 'type' => CardType::Task, 'priority' => CardPriority::Low],
                         ],
                     ],
                 ],

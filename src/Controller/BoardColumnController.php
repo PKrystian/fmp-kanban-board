@@ -6,8 +6,10 @@ namespace App\Controller;
 
 use App\Entity\Board;
 use App\Entity\BoardColumn;
+use App\Entity\Card;
 use App\Form\BoardColumnType;
 use App\Security\BoardVoter;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -29,14 +31,32 @@ final class BoardColumnController extends AbstractController
         $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
 
         $column = (new BoardColumn())
-            ->setBoard($board)
-            ->setPosition($this->nextPosition($board));
+            ->setBoard($board);
         $form = $formFactory->createNamed('new_column', BoardColumnType::class, $column);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($column);
-            $entityManager->flush();
+            $boardId = $board->getId();
+            if (null === $boardId) {
+                throw $this->createNotFoundException();
+            }
+
+            $entityManager->wrapInTransaction(function () use ($boardId, $column, $entityManager): void {
+                $lockedBoard = $entityManager->find(
+                    Board::class,
+                    $boardId,
+                    LockMode::PESSIMISTIC_WRITE,
+                );
+                if (!$lockedBoard instanceof Board) {
+                    throw $this->createNotFoundException();
+                }
+
+                $column
+                    ->setBoard($lockedBoard)
+                    ->setPosition($this->nextPosition($lockedBoard, $entityManager));
+                $entityManager->persist($column);
+                $entityManager->flush();
+            });
             $this->addFlash('success', 'Column created');
         } else {
             $this->addFlash('danger', 'The column could not be created. Check its name and WIP limit');
@@ -119,30 +139,66 @@ final class BoardColumnController extends AbstractController
             throw $this->createAccessDeniedException('Invalid CSRF token');
         }
 
-        if (!$column->getCards()->isEmpty()) {
+        $boardId = $board->getId();
+        $columnId = $column->getId();
+        if (null === $boardId || null === $columnId) {
+            throw $this->createNotFoundException();
+        }
+
+        $deleteResult = $entityManager->wrapInTransaction(function () use ($boardId, $columnId, $entityManager): string {
+            $lockedBoard = $entityManager->find(
+                Board::class,
+                $boardId,
+                LockMode::PESSIMISTIC_WRITE,
+            );
+            $lockedColumn = $entityManager->find(
+                BoardColumn::class,
+                $columnId,
+                LockMode::PESSIMISTIC_WRITE,
+            );
+            if (!$lockedBoard instanceof Board
+                || !$lockedColumn instanceof BoardColumn
+                || $lockedColumn->getBoard()?->getId() !== $boardId
+            ) {
+                throw $this->createNotFoundException();
+            }
+
+            if ($entityManager->getRepository(Card::class)->count(['column' => $lockedColumn]) > 0) {
+                return 'has_cards';
+            }
+
+            if ($entityManager->getRepository(BoardColumn::class)->count(['board' => $lockedBoard]) <= 1) {
+                return 'last_column';
+            }
+
+            $remainingColumns = array_values(array_filter(
+                $entityManager->getRepository(BoardColumn::class)->findBy(
+                    ['board' => $lockedBoard],
+                    ['position' => 'ASC', 'id' => 'ASC'],
+                ),
+                static fn (BoardColumn $existingColumn): bool => $existingColumn->getId() !== $columnId,
+            ));
+
+            $entityManager->remove($lockedColumn);
+            foreach ($remainingColumns as $index => $remainingColumn) {
+                $remainingColumn->setPosition($index + 1);
+            }
+            $entityManager->flush();
+
+            return 'deleted';
+        });
+
+        if ('has_cards' === $deleteResult) {
             $this->addFlash('warning', 'This column cannot be deleted because it contains cards');
 
             return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
         }
 
-        if ($board->getColumns()->count() <= 1) {
+        if ('last_column' === $deleteResult) {
             $this->addFlash('warning', 'The last column on a board cannot be deleted');
 
             return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
         }
-
-        $remainingColumns = array_values(array_filter(
-            $board->getColumns()->toArray(),
-            static fn (BoardColumn $existingColumn): bool => $existingColumn !== $column,
-        ));
-
-        $entityManager->wrapInTransaction(function () use ($column, $remainingColumns, $entityManager): void {
-            $entityManager->remove($column);
-            foreach ($remainingColumns as $index => $remainingColumn) {
-                $remainingColumn->setPosition($index + 1);
-            }
-            $entityManager->flush();
-        });
 
         $this->addFlash('success', 'Column deleted');
 
@@ -156,15 +212,16 @@ final class BoardColumnController extends AbstractController
         }
     }
 
-    private function nextPosition(Board $board): int
+    private function nextPosition(Board $board, EntityManagerInterface $entityManager): int
     {
-        $lastPosition = 0;
-        foreach ($board->getColumns() as $column) {
-            if (null !== $column->getPosition()) {
-                $lastPosition = max($lastPosition, $column->getPosition());
-            }
-        }
+        $lastPosition = $entityManager->createQueryBuilder()
+            ->select('COALESCE(MAX(board_column.position), 0)')
+            ->from(BoardColumn::class, 'board_column')
+            ->andWhere('board_column.board = :board')
+            ->setParameter('board', $board)
+            ->getQuery()
+            ->getSingleScalarResult();
 
-        return $lastPosition + 1;
+        return (int) $lastPosition + 1;
     }
 }

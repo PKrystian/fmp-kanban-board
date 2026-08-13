@@ -76,6 +76,24 @@ final class BoardControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
     }
 
+    public function testAjaxRequestToAnotherUsersBoardReturnsForbiddenResponse(): void
+    {
+        $client = self::createClient();
+        $owner = $this->createUser('owner@example.com');
+        $otherUser = $this->createUser('other@example.com');
+        [$board] = $this->createBoard($owner);
+
+        $client->loginUser($otherUser);
+        $client->request(
+            'GET',
+            '/boards/'.$board->getId(),
+            server: ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'],
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertStringContainsString('Access denied', (string) $client->getResponse()->getContent());
+    }
+
     public function testNonEmptyColumnCannotBeDeleted(): void
     {
         $client = self::createClient();
@@ -115,6 +133,62 @@ final class BoardControllerTest extends WebTestCase
         self::assertSelectorTextContains('.alert-warning', 'cannot be deleted because it contains cards');
         $entityManager->clear();
         self::assertInstanceOf(BoardColumn::class, $entityManager->find(BoardColumn::class, $columnId));
+    }
+
+    public function testLastColumnCannotBeDeleted(): void
+    {
+        $client = self::createClient();
+        $user = $this->createUser('owner@example.com');
+        $column = (new BoardColumn())
+            ->setName('Backlog')
+            ->setPosition(1);
+        $board = (new Board())
+            ->setName('Product roadmap')
+            ->setOwner($user)
+            ->addColumn($column);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist($board);
+        $entityManager->flush();
+        $client->loginUser($user);
+
+        $crawler = $client->request('GET', '/boards/'.$board->getId());
+        $client->submit(
+            $crawler
+                ->filter('#delete-column-'.$column->getId())
+                ->selectButton('Delete column')
+                ->form(),
+        );
+        $client->followRedirect();
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('.alert-warning', 'last column on a board');
+        $entityManager->clear();
+        self::assertInstanceOf(BoardColumn::class, $entityManager->find(BoardColumn::class, $column->getId()));
+    }
+
+    /**
+     * @return array{Board, BoardColumn}
+     */
+    private function createBoard(User $owner): array
+    {
+        $backlog = (new BoardColumn())
+            ->setName('Backlog')
+            ->setPosition(1);
+        $board = (new Board())
+            ->setName('Product roadmap')
+            ->setOwner($owner)
+            ->addColumn($backlog)
+            ->addColumn(
+                (new BoardColumn())
+                    ->setName('Done')
+                    ->setPosition(2),
+            );
+
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist($board);
+        $entityManager->flush();
+
+        return [$board, $backlog];
     }
 
     private function createUser(string $email): User
