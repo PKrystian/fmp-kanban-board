@@ -16,7 +16,17 @@ $(function () {
     const filtersActive = $board.attr('data-filters-active') === 'true';
     const cardSortables = [];
     let columnSortable = null;
+    let panelTrigger = null;
     let panelUrl = null;
+
+    panelElement.addEventListener('hidden.bs.offcanvas', () => {
+        const trigger = panelTrigger;
+        panelTrigger = null;
+
+        if (trigger?.isConnected) {
+            window.setTimeout(() => trigger.focus({ preventScroll: true }), 0);
+        }
+    });
 
     const templateContent = (selector) => {
         const template = document.querySelector(selector);
@@ -157,15 +167,23 @@ $(function () {
             refreshColumn($sourceColumn);
         }
 
+        if (panelTrigger && !panelTrigger.isConnected) {
+            panelTrigger = $board
+                .find(`[data-card-entry][data-card-id="${cardId}"] [data-card-panel-url]`)
+                .first()
+                .get(0) ?? null;
+        }
+
         showFeedback($response);
 
         return $response;
     };
 
-    const loadPanel = (url) => {
+    const loadPanel = (url, trigger = null) => {
         panelUrl = url;
+        panelTrigger = trigger ?? panelTrigger;
         $panel.empty().append(templateContent('[data-card-panel-loading-template]'));
-        panel.show();
+        panel.show(trigger);
 
         $.ajax({ url, method: 'GET' })
             .done((html) => {
@@ -182,7 +200,7 @@ $(function () {
         }
 
         event.preventDefault();
-        loadPanel(this.href);
+        loadPanel(this.href, this);
     });
 
     $panel.on('click', '[data-card-panel-retry]', function () {

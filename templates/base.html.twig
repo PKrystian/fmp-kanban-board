@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,33 +15,47 @@
         <a class="visually-hidden-focusable position-absolute top-0 start-0 z-3 p-3 bg-dark text-white" href="#main-content">Skip to main content</a>
 
         <header>
-            <nav class="navbar navbar-expand bg-body border-bottom" aria-label="Primary navigation">
+            <nav class="navbar navbar-expand-md bg-body border-bottom" aria-label="Primary navigation">
                 <div class="container">
                     <a class="navbar-brand" href="{{ path('app_home') }}">FMP Kanban</a>
 
-                    <ul class="navbar-nav flex-row align-items-center gap-2">
-                        <li class="nav-item">
-                            <a class="nav-link{% if app.request.attributes.get('_route') == 'app_home' %} active{% endif %}" href="{{ path('app_home') }}"{% if app.request.attributes.get('_route') == 'app_home' %} aria-current="page"{% endif %}>Home</a>
-                        </li>
-                        {% if app.user %}
+                    <button
+                        class="navbar-toggler"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#primary-navigation"
+                        aria-controls="primary-navigation"
+                        aria-expanded="false"
+                        aria-label="Toggle navigation"
+                    >
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+
+                    <div class="collapse navbar-collapse" id="primary-navigation">
+                        <ul class="navbar-nav ms-auto align-items-md-center gap-md-2">
                             <li class="nav-item">
-                                <a class="nav-link{% if app.request.attributes.get('_route') starts with 'app_board_' %} active{% endif %}" href="{{ path('app_board_index') }}"{% if app.request.attributes.get('_route') starts with 'app_board_' %} aria-current="page"{% endif %}>Boards</a>
+                                <a class="nav-link{% if app.request.attributes.get('_route') == 'app_home' %} active{% endif %}" href="{{ path('app_home') }}"{% if app.request.attributes.get('_route') == 'app_home' %} aria-current="page"{% endif %}>Home</a>
                             </li>
-                            <li class="nav-item">
-                                <span class="navbar-text">{{ app.user.displayName }}</span>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ path('app_logout') }}">Log out</a>
-                            </li>
-                        {% else %}
-                            <li class="nav-item">
-                                <a class="nav-link{% if app.request.attributes.get('_route') == 'app_login' %} active{% endif %}" href="{{ path('app_login') }}"{% if app.request.attributes.get('_route') == 'app_login' %} aria-current="page"{% endif %}>Log in</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="btn btn-primary" href="{{ path('app_register') }}">Register</a>
-                            </li>
-                        {% endif %}
-                    </ul>
+                            {% if app.user %}
+                                <li class="nav-item">
+                                    <a class="nav-link{% if app.request.attributes.get('_route') starts with 'app_board_' %} active{% endif %}" href="{{ path('app_board_index') }}"{% if app.request.attributes.get('_route') starts with 'app_board_' %} aria-current="page"{% endif %}>Boards</a>
+                                </li>
+                                <li class="nav-item">
+                                    <span class="navbar-text text-break">{{ app.user.displayName }}</span>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ path('app_logout') }}">Log out</a>
+                                </li>
+                            {% else %}
+                                <li class="nav-item">
+                                    <a class="nav-link{% if app.request.attributes.get('_route') == 'app_login' %} active{% endif %}" href="{{ path('app_login') }}"{% if app.request.attributes.get('_route') == 'app_login' %} aria-current="page"{% endif %}>Log in</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="btn btn-primary" href="{{ path('app_register') }}">Register</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
                 </div>
             </nav>
         </header>

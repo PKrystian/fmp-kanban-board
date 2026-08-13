@@ -16,14 +16,14 @@
     <nav aria-label="Breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ path('app_board_index') }}">Boards</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ board.name }}</li>
+            <li class="breadcrumb-item active text-break" aria-current="page">{{ board.name }}</li>
         </ol>
     </nav>
 
     <section aria-labelledby="board-heading">
         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
             <div>
-                <h1 id="board-heading" class="h2 mb-1">{{ board.name }}</h1>
+                <h1 id="board-heading" class="h2 mb-1 text-break">{{ board.name }}</h1>
                 <p class="text-body-secondary mb-0">Track work as it moves across the board</p>
             </div>
             <div class="d-flex flex-wrap align-items-center gap-2 align-self-start align-self-md-center">
@@ -96,7 +96,7 @@
                     <div class="card border-0 shadow-sm bg-body-secondary">
                         <div class="card-header bg-transparent border-0 pt-3">
                             <div class="d-flex align-items-start justify-content-between gap-2">
-                                <h2 class="h6 fw-semibold mb-0">{{ column.name }}</h2>
+                                <h2 class="h6 fw-semibold mb-0 text-break">{{ column.name }}</h2>
                                 <span
                                     class="badge rounded-pill {{ wip_exceeded ? 'text-bg-danger' : 'text-bg-light' }}"
                                     data-card-count-badge

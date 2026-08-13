@@ -1,6 +1,10 @@
 .git
 .idea
 .vscode
+.env.local
+.env.*.local
+.env.prod
+config/secrets/prod/prod.decrypt.private.php
 vendor
 var
 public/assets

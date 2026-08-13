@@ -1,88 +1,79 @@
-# FMP
+# FMP Kanban
 
-FMP is a Kanban board application built with Symfony, MySQL, Docker, Bootstrap 5 and jQuery.
+Kanban application built with PHP 8.4, Symfony 7.4, MySQL 8.4, Twig, AssetMapper and Bootstrap 5.
 
-## Stack
-
-- PHP 8.4.1+
-- Symfony 7.4
-- MySQL 8.4
-- Twig, AssetMapper, Bootstrap 5 and jQuery
-- Docker Compose
-
-## Installation
-
-Build the application image:
+## Development
 
 ```bash
-docker compose build
-```
-
-Start the containers:
-
-```bash
-docker compose up -d
-```
-
-Install PHP dependencies:
-
-```bash
+docker compose up -d --build
 docker compose exec app composer install
-```
-
-The application is available at:
-
-```text
-http://localhost:8080
-```
-
-## Frontend assets
-
-Bootstrap 5 and jQuery are managed by AssetMapper. Restore the browser packages after installing PHP dependencies:
-
-```bash
 docker compose exec app php bin/console importmap:install
+docker compose exec app php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec app php bin/console app:seed-demo-data
 ```
 
-## Quality checks
+Open <http://localhost:8080>. Stop the environment with `docker compose down`.
 
-Run the test suite:
+## Demo accounts
+
+The seed command creates two accounts and replaces only their documented demo boards. Other boards are left unchanged, so the command can be run again safely.
+
+| Name | Email | Password | Example boards |
+| --- | --- | --- | --- |
+| Jan Nowak | `jan.nowak@example.com` | `zaq1@WSX` | Remont mieszkania, Plan nauki Symfony |
+| Anna Nowak | `anna.nowak@example.com` | `zaq1@WSX` | Organizacja konferencji, Wydanie aplikacji mobilnej |
+
+To inspect or edit a Kanban board, open <http://localhost:8080/login>, sign in with either account, select **Boards** in the navigation and open one of the example boards. Cards can be opened by selecting their title or the **Edit** button.
+
+Recreate the demo data at any time with:
 
 ```bash
+docker compose exec app php bin/console app:seed-demo-data
+```
+
+## Tests and checks
+
+Prepare the test database once, then run the suite:
+
+```bash
+docker compose exec app php bin/console doctrine:database:create --env=test --if-not-exists
+docker compose exec app php bin/console doctrine:migrations:migrate --env=test --no-interaction
 docker compose exec app php bin/phpunit
 ```
 
-Validate templates and configuration:
+Useful project checks:
 
 ```bash
+docker compose exec app php bin/console doctrine:schema:validate
+docker compose exec app php bin/console lint:container
 docker compose exec app php bin/console lint:twig templates
-docker compose exec app php bin/console lint:yaml config compose.yaml compose.override.yaml
+docker compose exec app php bin/console lint:yaml config
+docker compose exec app php bin/console asset-map:compile
+docker compose config --quiet
 ```
 
-## Symfony console
-
-Run Symfony commands inside the application container:
+Create or apply development migrations with:
 
 ```bash
-docker compose exec app php bin/console
+docker compose exec app php bin/console make:migration
+docker compose exec app php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
-## Database
+## Production image
 
-Run database migrations:
+Copy `.env.prod.example` to `.env.prod` and set random `APP_SECRET`, database passwords and `DATABASE_URL`. The database host in that URL is `database`; URL-encode special characters in its password.
+
+Build, migrate and start the production stack:
 
 ```bash
-docker compose exec app php bin/console doctrine:migrations:migrate
+docker compose --env-file .env.prod -f compose.prod.yaml build
+docker compose --env-file .env.prod -f compose.prod.yaml up -d database
+docker compose --env-file .env.prod -f compose.prod.yaml run --rm app php bin/console doctrine:migrations:migrate --no-interaction
+docker compose --env-file .env.prod -f compose.prod.yaml up -d
 ```
 
-Run a SQL query:
+The production build installs dependencies without development packages, compiles AssetMapper assets and warms the Symfony production cache. Application sources are copied into the images; they are not bind-mounted. Check the resolved configuration with:
 
 ```bash
-docker compose exec app php bin/console dbal:run-sql "SELECT 1"
-```
-
-## Stopping the application
-
-```bash
-docker compose down
+docker compose --env-file .env.prod -f compose.prod.yaml config --quiet
 ```

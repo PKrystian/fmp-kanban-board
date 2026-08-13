@@ -219,6 +219,27 @@ final class CardControllerTest extends WebTestCase
         self::assertSame(1, $unchangedCard->getPosition());
     }
 
+    public function testUserCannotOpenAnotherUsersCardThroughOwnedBoardUrl(): void
+    {
+        $client = self::createClient();
+        $user = $this->createUser('owner@example.com');
+        $otherUser = $this->createUser('other@example.com');
+        [$board] = $this->createBoard($user);
+        [, $foreignColumn] = $this->createBoard($otherUser);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $foreignCard = (new Card())
+            ->setTitle('Private card')
+            ->setPosition(1)
+            ->setColumn($foreignColumn);
+        $entityManager->persist($foreignCard);
+        $entityManager->flush();
+        $client->loginUser($user);
+
+        $client->request('GET', '/boards/'.$board->getId().'/cards/'.$foreignCard->getId().'/edit');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+    }
+
     public function testDangerousMarkdownIsRenderedWithoutHtmlOrUnsafeLinks(): void
     {
         $client = self::createClient();

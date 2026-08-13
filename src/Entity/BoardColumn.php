@@ -9,6 +9,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
+#[ORM\Index(name: 'IDX_BOARD_COLUMN_BOARD_POSITION', columns: ['board_id', 'position'])]
 class BoardColumn
 {
     #[ORM\Id]

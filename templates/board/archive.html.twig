@@ -6,7 +6,7 @@
     <nav aria-label="Breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ path('app_board_index') }}">Boards</a></li>
-            <li class="breadcrumb-item"><a href="{{ path('app_board_show', {id: board.id}) }}">{{ board.name }}</a></li>
+            <li class="breadcrumb-item text-break"><a href="{{ path('app_board_show', {id: board.id}) }}">{{ board.name }}</a></li>
             <li class="breadcrumb-item active" aria-current="page">Archive</li>
         </ol>
     </nav>
@@ -14,7 +14,7 @@
     <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
         <div>
             <h1 class="h2 mb-1">Card archive</h1>
-            <p class="text-body-secondary mb-0">{{ board.name }}</p>
+            <p class="text-body-secondary mb-0 text-break">{{ board.name }}</p>
         </div>
         <a class="btn btn-outline-primary align-self-start" href="{{ path('app_board_show', {id: board.id}) }}">Back to board</a>
     </div>
@@ -29,7 +29,7 @@
                                 <p class="small text-body-secondary mb-1">
                                     {{ card.key }} | Previous column: {{ card.column.name }} | Archived {{ card.archivedAt|date('M j, Y H:i') }}
                                 </p>
-                                <h2 class="h5 card-title">{{ card.title }}</h2>
+                                <h2 class="h5 card-title text-break">{{ card.title }}</h2>
                                 {% if card.description %}
                                     <div class="text-body-secondary">
                                         {{ card.description|markdown_to_html }}

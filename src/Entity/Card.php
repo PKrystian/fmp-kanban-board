@@ -11,6 +11,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: CardRepository::class)]
+#[ORM\Index(name: 'IDX_CARD_COLUMN_ARCHIVED_POSITION', columns: ['column_id', 'archived_at', 'position'])]
 class Card
 {
     #[ORM\Id]

@@ -6,7 +6,7 @@
     <nav aria-label="Breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ path('app_board_index') }}">Boards</a></li>
-            <li class="breadcrumb-item"><a href="{{ path('app_board_show', {id: board.id}) }}">{{ board.name }}</a></li>
+            <li class="breadcrumb-item text-break"><a href="{{ path('app_board_show', {id: board.id}) }}">{{ board.name }}</a></li>
             <li class="breadcrumb-item active" aria-current="page">{{ heading }}</li>
         </ol>
     </nav>
@@ -20,7 +20,7 @@
                         <p class="text-body-secondary small mb-1">{{ cardForm.vars.data.key }}</p>
                     {% endif %}
                     {% if column %}
-                        <p class="text-body-secondary">Board: {{ board.name }} | Column: {{ column.name }}</p>
+                        <p class="text-body-secondary text-break">Board: {{ board.name }} | Column: {{ column.name }}</p>
                     {% endif %}
 
                     {{ form_start(cardForm) }}
