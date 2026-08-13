@@ -37,9 +37,9 @@ final class BoardColumnController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager->persist($column);
             $entityManager->flush();
-            $this->addFlash('success', 'Column created.');
+            $this->addFlash('success', 'Column created');
         } else {
-            $this->addFlash('danger', 'The column could not be created. Check its name and WIP limit.');
+            $this->addFlash('danger', 'The column could not be created. Check its name and WIP limit');
         }
 
         return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
@@ -61,9 +61,9 @@ final class BoardColumnController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager->flush();
-            $this->addFlash('success', 'Column updated.');
+            $this->addFlash('success', 'Column updated');
         } else {
-            $this->addFlash('danger', 'The column could not be updated. Check its name and WIP limit.');
+            $this->addFlash('danger', 'The column could not be updated. Check its name and WIP limit');
         }
 
         return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
@@ -78,7 +78,7 @@ final class BoardColumnController extends AbstractController
         $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
 
         if (!$this->isCsrfTokenValid('reorder_columns_'.$board->getId(), $request->headers->get('X-CSRF-Token'))) {
-            throw $this->createAccessDeniedException('Invalid CSRF token.');
+            throw $this->createAccessDeniedException('Invalid CSRF token');
         }
 
         $columnIds = array_map('intval', $request->getPayload()->all('columnIds'));
@@ -91,7 +91,7 @@ final class BoardColumnController extends AbstractController
             || count(array_unique($columnIds)) !== count($columnIds)
             || array_diff($columnIds, array_keys($columnsById))
         ) {
-            return $this->json(['error' => 'Invalid column order.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['error' => 'Invalid column order'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $entityManager->wrapInTransaction(function () use ($columnIds, $columnsById, $entityManager): void {
@@ -116,17 +116,17 @@ final class BoardColumnController extends AbstractController
         $this->denyUnlessColumnBelongsToBoard($column, $board);
 
         if (!$this->isCsrfTokenValid('delete_column_'.$column->getId(), $request->request->getString('_token'))) {
-            throw $this->createAccessDeniedException('Invalid CSRF token.');
+            throw $this->createAccessDeniedException('Invalid CSRF token');
         }
 
         if (!$column->getCards()->isEmpty()) {
-            $this->addFlash('warning', 'This column cannot be deleted because it contains cards.');
+            $this->addFlash('warning', 'This column cannot be deleted because it contains cards');
 
             return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
         }
 
         if ($board->getColumns()->count() <= 1) {
-            $this->addFlash('warning', 'The last column on a board cannot be deleted.');
+            $this->addFlash('warning', 'The last column on a board cannot be deleted');
 
             return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
         }
@@ -144,7 +144,7 @@ final class BoardColumnController extends AbstractController
             $entityManager->flush();
         });
 
-        $this->addFlash('success', 'Column deleted.');
+        $this->addFlash('success', 'Column deleted');
 
         return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
     }

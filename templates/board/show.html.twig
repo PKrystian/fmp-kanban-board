@@ -30,6 +30,7 @@
                 <span class="badge rounded-pill text-bg-light border">
                     {{ board.columns|length }} columns
                 </span>
+                <a class="btn btn-outline-secondary btn-sm" href="{{ path('app_board_archive', {id: board.id}) }}">Archive</a>
                 <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#create-column">
                     Add column
                 </button>
@@ -77,7 +78,7 @@
 
         {% if filtersActive %}
             <div class="alert alert-info py-2" role="status">
-                Filters are active. Clear them to change the card or column order.
+                Filters are active. Clear them to change the card or column order
             </div>
         {% endif %}
 
@@ -265,7 +266,7 @@
 
     <template data-card-move-error-template>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            Could not move the card. The previous order has been restored.
+            Could not move the card. The previous order has been restored
             <a class="alert-link" href="{{ path('app_board_show', {id: board.id}) }}">Reload the board</a>
             <button class="btn-close" type="button" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>

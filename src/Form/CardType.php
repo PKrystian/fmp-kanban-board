@@ -38,6 +38,8 @@ final class CardType extends AbstractType
                 ],
             ])
             ->add('description', TextareaType::class, [
+                'label' => 'Description (Markdown)',
+                'help' => 'Formatting is shown on the card after saving',
                 'required' => false,
                 'attr' => [
                     'rows' => 5,

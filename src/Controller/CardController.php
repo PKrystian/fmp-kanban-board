@@ -10,6 +10,7 @@ use App\Entity\Card;
 use App\Form\CardDeleteType;
 use App\Form\CardType;
 use App\Security\BoardVoter;
+use App\Service\CardArchiver;
 use App\Service\CardMover;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
@@ -52,13 +53,13 @@ final class CardController extends AbstractController
                 return $this->render('card/_mutation_success.html.twig', [
                     'card' => $card,
                     'deleteForm' => $this->createDeleteForm($formFactory, $board, $card)->createView(),
-                    'message' => 'Card created.',
+                    'message' => 'Card created',
                     'quickCreateForm' => $this->createQuickCreateForm($formFactory, $board, $column)->createView(),
                     'column' => $column,
                 ]);
             }
 
-            $this->addFlash('success', 'Card created.');
+            $this->addFlash('success', 'Card created');
 
             return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
         }
@@ -91,6 +92,7 @@ final class CardController extends AbstractController
     ): Response {
         $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
         $this->denyUnlessCardBelongsToBoard($card, $board);
+        $this->denyUnlessCardIsActive($card);
 
         $originalColumn = $card->getColumn();
         $form = $this->createForm(CardType::class, $card, [
@@ -111,7 +113,7 @@ final class CardController extends AbstractController
 
             if ($selectedColumn !== $originalColumn) {
                 $card->setColumn($originalColumn);
-                $cardMover->move($card, $selectedColumn, $selectedColumn->getCards()->count() + 1);
+                $cardMover->move($card, $selectedColumn, $this->activeCardCount($selectedColumn) + 1);
             } else {
                 $entityManager->flush();
             }
@@ -120,11 +122,11 @@ final class CardController extends AbstractController
                 return $this->render('card/_mutation_success.html.twig', [
                     'card' => $card,
                     'deleteForm' => $this->createDeleteForm($formFactory, $board, $card)->createView(),
-                    'message' => 'Card updated.',
+                    'message' => 'Card updated',
                 ]);
             }
 
-            $this->addFlash('success', 'Card updated.');
+            $this->addFlash('success', 'Card updated');
 
             return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
         }
@@ -155,9 +157,10 @@ final class CardController extends AbstractController
     ): Response {
         $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
         $this->denyUnlessCardBelongsToBoard($card, $board);
+        $this->denyUnlessCardIsActive($card);
 
         if (!$this->isCsrfTokenValid('move_cards_'.$board->getId(), $request->headers->get('X-CSRF-Token'))) {
-            throw $this->createAccessDeniedException('Invalid CSRF token.');
+            throw $this->createAccessDeniedException('Invalid CSRF token');
         }
 
         $payload = $request->getPayload();
@@ -169,7 +172,7 @@ final class CardController extends AbstractController
         try {
             $cardMover->move($card, $targetColumn, $payload->getInt('position'));
         } catch (\InvalidArgumentException) {
-            return $this->json(['error' => 'Invalid card position.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['error' => 'Invalid card position'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         return new Response(status: Response::HTTP_NO_CONTENT);
@@ -185,6 +188,7 @@ final class CardController extends AbstractController
     ): Response {
         $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
         $this->denyUnlessCardBelongsToBoard($card, $board);
+        $this->denyUnlessCardIsActive($card);
 
         $form = $formFactory->createNamed(
             'delete_card_'.$card->getId(),
@@ -198,12 +202,60 @@ final class CardController extends AbstractController
             $entityManager->remove($card);
             $entityManager->flush();
 
-            $this->addFlash('success', 'Card deleted.');
+            $this->addFlash('success', 'Card deleted');
         } else {
-            $this->addFlash('danger', 'The card could not be deleted.');
+            $this->addFlash('danger', 'The card could not be deleted');
         }
 
         return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
+    }
+
+    #[Route('/cards/{cardId}/archive', name: 'app_card_archive', requirements: ['cardId' => '\\d+'], methods: ['POST'])]
+    public function archive(
+        #[MapEntity(id: 'boardId')] Board $board,
+        #[MapEntity(id: 'cardId')] Card $card,
+        Request $request,
+        CardArchiver $cardArchiver,
+    ): Response {
+        $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
+        $this->denyUnlessCardBelongsToBoard($card, $board);
+
+        if (!$this->isCsrfTokenValid('archive_card_'.$card->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
+        if ($card->isArchived()) {
+            throw $this->createNotFoundException();
+        }
+
+        $cardArchiver->archive($card);
+        $this->addFlash('success', 'Card archived');
+
+        return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
+    }
+
+    #[Route('/cards/{cardId}/restore', name: 'app_card_restore', requirements: ['cardId' => '\\d+'], methods: ['POST'])]
+    public function restore(
+        #[MapEntity(id: 'boardId')] Board $board,
+        #[MapEntity(id: 'cardId')] Card $card,
+        Request $request,
+        CardArchiver $cardArchiver,
+    ): Response {
+        $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
+        $this->denyUnlessCardBelongsToBoard($card, $board);
+
+        if (!$this->isCsrfTokenValid('restore_card_'.$card->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
+        if (!$card->isArchived()) {
+            throw $this->createNotFoundException();
+        }
+
+        $cardArchiver->restore($card);
+        $this->addFlash('success', 'Card restored to '.$card->getColumn()?->getName());
+
+        return $this->redirectToRoute('app_board_archive', ['id' => $board->getId()]);
     }
 
     private function denyUnlessColumnBelongsToBoard(BoardColumn $column, Board $board): void
@@ -221,16 +273,31 @@ final class CardController extends AbstractController
         }
     }
 
+    private function denyUnlessCardIsActive(Card $card): void
+    {
+        if ($card->isArchived()) {
+            throw $this->createNotFoundException();
+        }
+    }
+
     private function nextPosition(BoardColumn $column): int
     {
         $lastPosition = 0;
         foreach ($column->getCards() as $card) {
-            if (null !== $card->getPosition()) {
+            if (!$card->isArchived() && null !== $card->getPosition()) {
                 $lastPosition = max($lastPosition, $card->getPosition());
             }
         }
 
         return $lastPosition + 1;
+    }
+
+    private function activeCardCount(BoardColumn $column): int
+    {
+        return count(array_filter(
+            $column->getCards()->toArray(),
+            static fn (Card $card): bool => !$card->isArchived(),
+        ));
     }
 
     private function createQuickCreateForm(

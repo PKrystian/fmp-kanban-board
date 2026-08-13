@@ -35,6 +35,7 @@ final class CardRepository extends ServiceEntityRepository
         $queryBuilder = $this->createQueryBuilder('card')
             ->innerJoin('card.column', 'board_column')
             ->andWhere('board_column.board = :board')
+            ->andWhere('card.archivedAt IS NULL')
             ->setParameter('board', $board)
             ->orderBy('board_column.position', 'ASC')
             ->addOrderBy('card.position', 'ASC');
@@ -75,6 +76,7 @@ final class CardRepository extends ServiceEntityRepository
             ->select('IDENTITY(card.column) AS columnId', 'COUNT(card.id) AS cardCount')
             ->innerJoin('card.column', 'board_column')
             ->andWhere('board_column.board = :board')
+            ->andWhere('card.archivedAt IS NULL')
             ->setParameter('board', $board)
             ->groupBy('card.column')
             ->getQuery()
@@ -86,5 +88,21 @@ final class CardRepository extends ServiceEntityRepository
         }
 
         return $counts;
+    }
+
+    /**
+     * @return list<Card>
+     */
+    public function findArchivedForBoard(Board $board): array
+    {
+        return $this->createQueryBuilder('card')
+            ->innerJoin('card.column', 'board_column')
+            ->andWhere('board_column.board = :board')
+            ->andWhere('card.archivedAt IS NOT NULL')
+            ->setParameter('board', $board)
+            ->orderBy('card.archivedAt', 'DESC')
+            ->addOrderBy('card.id', 'DESC')
+            ->getQuery()
+            ->getResult();
     }
 }

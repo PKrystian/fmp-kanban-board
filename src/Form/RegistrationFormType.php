@@ -42,7 +42,7 @@ class RegistrationFormType extends AbstractType
                     new NotBlank(),
                     new Length(
                         min: 8,
-                        minMessage: 'Minimum 8 characters.',
+                        minMessage: 'Minimum 8 characters',
                         max: 4096,
                     ),
                 ],

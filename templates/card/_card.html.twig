@@ -26,6 +26,11 @@
                 data-card-panel-url
             >{{ card.title }}</a>
         </h3>
+        {% if card.description %}
+            <div class="small text-body-secondary position-relative z-2 mb-3" data-card-description>
+                {{ card.description|markdown_to_html }}
+            </div>
+        {% endif %}
         {% if card.dueDate %}
             <p class="small mb-3 {{ overdue ? 'text-danger fw-semibold' : 'text-body-secondary' }}">
                 {{ overdue ? 'Overdue' : 'Due' }}: {{ card.dueDate|date('M j, Y') }}
@@ -34,6 +39,7 @@
 
         <div class="d-flex gap-2 position-relative z-2">
             <a class="btn btn-sm btn-outline-primary" href="{{ path('app_card_edit', {boardId: card.column.board.id, cardId: card.id}) }}" data-card-panel-url>Edit</a>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#archive-card-{{ card.id }}">Archive</button>
             <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#delete-card-{{ card.id }}">Delete</button>
         </div>
     </div>
@@ -47,13 +53,34 @@
                 <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-0">This will permanently delete “{{ card.title }}”</p>
+                <p class="mb-0">This will permanently delete {{ card.title }}</p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
                 {{ form_start(deleteForm) }}
                     <button class="btn btn-danger" type="submit">Delete card</button>
                 {{ form_end(deleteForm) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="archive-card-{{ card.id }}" tabindex="-1" aria-labelledby="archive-card-title-{{ card.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="archive-card-title-{{ card.id }}">Archive card?</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">The card will leave the active board and remain available in the archive</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{{ path('app_card_archive', {boardId: card.column.board.id, cardId: card.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('archive_card_' ~ card.id) }}">
+                    <button class="btn btn-primary" type="submit">Archive card</button>
+                </form>
             </div>
         </div>
     </div>

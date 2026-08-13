@@ -33,7 +33,7 @@ final class BoardColumnType extends AbstractType
             ->add('wipLimit', IntegerType::class, [
                 'label' => 'WIP limit',
                 'required' => false,
-                'help' => 'Leave empty for no limit.',
+                'help' => 'Leave empty for no limit',
                 'attr' => ['min' => 1],
                 'constraints' => [new Positive()],
             ]);

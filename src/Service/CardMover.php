@@ -16,24 +16,28 @@ final readonly class CardMover
 
     public function move(Card $card, BoardColumn $targetColumn, int $targetPosition): void
     {
+        if ($card->isArchived()) {
+            throw new \InvalidArgumentException('An archived card cannot be moved');
+        }
+
         $sourceColumn = $card->getColumn();
         if (!$sourceColumn instanceof BoardColumn) {
-            throw new \InvalidArgumentException('The card must belong to a column.');
+            throw new \InvalidArgumentException('The card must belong to a column');
         }
 
         $sourceCards = array_values(array_filter(
             $sourceColumn->getCards()->toArray(),
-            static fn (Card $existingCard): bool => $existingCard !== $card,
+            static fn (Card $existingCard): bool => $existingCard !== $card && !$existingCard->isArchived(),
         ));
         $targetCards = $sourceColumn === $targetColumn
             ? $sourceCards
             : array_values(array_filter(
                 $targetColumn->getCards()->toArray(),
-                static fn (Card $existingCard): bool => $existingCard !== $card,
+                static fn (Card $existingCard): bool => $existingCard !== $card && !$existingCard->isArchived(),
             ));
 
         if ($targetPosition < 1 || $targetPosition > count($targetCards) + 1) {
-            throw new \InvalidArgumentException('The target position is outside the column.');
+            throw new \InvalidArgumentException('The target position is outside the column');
         }
 
         array_splice($targetCards, $targetPosition - 1, 0, [$card]);

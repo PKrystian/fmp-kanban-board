@@ -50,7 +50,7 @@ final class BoardController extends AbstractController
             $entityManager->persist($board);
             $entityManager->flush();
 
-            $this->addFlash('success', 'Board created.');
+            $this->addFlash('success', 'Board created');
 
             return $this->redirectToRoute('app_board_show', ['id' => $board->getId()]);
         }
@@ -179,6 +179,17 @@ final class BoardController extends AbstractController
             'quickCreateForms' => $quickCreateForms,
             'totalCardCounts' => $totalCardCounts,
             'visibleCardCounts' => $visibleCardCounts,
+        ]);
+    }
+
+    #[Route('/{id}/archive', name: 'archive', requirements: ['id' => '\\d+'], methods: ['GET'])]
+    public function archive(Board $board, CardRepository $cardRepository): Response
+    {
+        $this->denyAccessUnlessGranted(BoardVoter::VIEW, $board);
+
+        return $this->render('board/archive.html.twig', [
+            'board' => $board,
+            'cards' => $cardRepository->findArchivedForBoard($board),
         ]);
     }
 

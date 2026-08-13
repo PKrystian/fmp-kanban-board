@@ -33,6 +33,9 @@ class Card
     #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $dueDate = null;
 
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $archivedAt = null;
+
     #[ORM\Column]
     private ?int $position = null;
 
@@ -108,6 +111,23 @@ class Card
         $this->dueDate = $dueDate;
 
         return $this;
+    }
+
+    public function getArchivedAt(): ?\DateTimeImmutable
+    {
+        return $this->archivedAt;
+    }
+
+    public function setArchivedAt(?\DateTimeImmutable $archivedAt): static
+    {
+        $this->archivedAt = $archivedAt;
+
+        return $this;
+    }
+
+    public function isArchived(): bool
+    {
+        return null !== $this->archivedAt;
     }
 
     public function getPosition(): ?int
